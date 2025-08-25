@@ -1,0 +1,56 @@
+<!-- SVG placeholder for load test image -->
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#f7fafc"/>
+  <rect x="30" y="30" width="740" height="540" fill="#ffffff" stroke="#333" stroke-width="2"/>
+  
+  <!-- Crane under load test -->
+  <rect x="300" y="150" width="200" height="15" fill="#4a5568"/>
+  <rect x="395" y="80" width="10" height="85" fill="#4a5568"/>
+  
+  <!-- Load block with test weights -->
+  <rect x="380" y="165" width="40" height="100" fill="#e53e3e"/>
+  <rect x="385" y="170" width="30" height="20" fill="#fbb6ce"/>
+  <rect x="385" y="195" width="30" height="20" fill="#fbb6ce"/>
+  <rect x="385" y="220" width="30" height="20" fill="#fbb6ce"/>
+  <rect x="385" y="245" width="30" height="20" fill="#fbb6ce"/>
+  
+  <!-- Wire rope -->
+  <line x1="400" y1="165" x2="400" y2="100" stroke="#2d3748" stroke-width="3"/>
+  
+  <!-- Load monitoring equipment -->
+  <rect x="450" y="200" width="60" height="40" fill="#48bb78"/>
+  <text x="480" y="220" text-anchor="middle" font-family="Arial" font-size="10" fill="white">
+    LOAD CELL
+  </text>
+  <text x="480" y="230" text-anchor="middle" font-family="Arial" font-size="8" fill="white">
+    27.5T
+  </text>
+  
+  <!-- Safety barriers -->
+  <rect x="200" y="300" width="400" height="5" fill="#f56565"/>
+  <text x="400" y="320" text-anchor="middle" font-family="Arial" font-size="12" fill="#e53e3e">
+    DANGER - LOAD TEST IN PROGRESS
+  </text>
+  
+  <text x="400" y="360" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">
+    Proof Load Test - 110% SWL
+  </text>
+  <text x="400" y="380" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">
+    Test Load: 27.5 Tonnes (110% of 25T SWL)
+  </text>
+  <text x="400" y="400" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">
+    Hold Time: 10 minutes - PASS
+  </text>
+  
+  <!-- Test parameters -->
+  <text x="100" y="480" font-family="Arial" font-size="10" fill="#333">Test Parameters:</text>
+  <text x="100" y="495" font-family="Arial" font-size="9" fill="#333">• Applied Load: 27.5T (110% SWL)</text>
+  <text x="100" y="508" font-family="Arial" font-size="9" fill="#333">• Hold Time: 10 minutes</text>
+  <text x="100" y="521" font-family="Arial" font-size="9" fill="#333">• Deflection: 15mm</text>
+  <text x="100" y="534" font-family="Arial" font-size="9" fill="#333">• Permanent Set: &lt;0.1mm</text>
+  
+  <text x="450" y="480" font-family="Arial" font-size="10" fill="#333">Result: PASS</text>
+  <text x="450" y="495" font-family="Arial" font-size="9" fill="#38a169">✓ No permanent deformation</text>
+  <text x="450" y="508" font-family="Arial" font-size="9" fill="#38a169">✓ Load held successfully</text>
+  <text x="450" y="521" font-family="Arial" font-size="9" fill="#38a169">✓ All safety systems functional</text>
+</svg>
