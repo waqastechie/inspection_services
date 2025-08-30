@@ -228,6 +228,7 @@
     </style>
 
     @stack('styles')
+    @yield('styles')
 </head>
 <body>
     <!-- Navigation -->
@@ -260,6 +261,54 @@
                             <a class="nav-link" href="{{ route('users.index') }}">
                                 <i class="fas fa-users me-1"></i> Users
                             </a>
+                        </li>
+                    @endif
+                    @if(auth()->user()->isSuperAdmin())
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog me-1"></i> Admin
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                <li><h6 class="dropdown-header">Resource Management</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.clients.index') }}">
+                                        <i class="fas fa-building me-2"></i> Clients
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.personnel.index') }}">
+                                        <i class="fas fa-user-tie me-2"></i> Personnel
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.equipment.index') }}">
+                                        <i class="fas fa-tools me-2"></i> Equipment
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.consumables.index') }}">
+                                        <i class="fas fa-box me-2"></i> Consumables
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">System Monitoring</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.logs.dashboard') }}">
+                                        <i class="fas fa-chart-line me-2"></i> Log Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.logs.system') }}">
+                                        <i class="fas fa-exclamation-triangle me-2"></i> System Logs
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.logs.activity') }}">
+                                        <i class="fas fa-user-clock me-2"></i> Activity Logs
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     @endif
                 </ul>

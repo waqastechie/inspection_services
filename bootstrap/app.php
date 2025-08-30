@@ -14,8 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
+            'log_activity' => \App\Http\Middleware\LogActivity::class,
+        ]);
+        
+        // Apply activity logging to all authenticated routes
+        $middleware->web(append: [
+            \App\Http\Middleware\LogActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Custom exception handling can be added here
     })->create();

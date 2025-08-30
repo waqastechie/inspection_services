@@ -141,6 +141,18 @@ Route::middleware('auth')->group(function () {
         // Consumables Management
         Route::resource('consumables', ConsumableController::class);
         Route::patch('consumables/{consumable}/toggle-status', [ConsumableController::class, 'toggleStatus'])->name('consumables.toggle-status');
+        
+        // Log Management (Super Admin only)
+        Route::prefix('logs')->name('logs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\LogController::class, 'dashboard'])->name('dashboard');
+            Route::get('/system', [\App\Http\Controllers\Admin\LogController::class, 'systemLogs'])->name('system');
+            Route::get('/activity', [\App\Http\Controllers\Admin\LogController::class, 'activityLogs'])->name('activity');
+            Route::get('/export/system', [\App\Http\Controllers\Admin\LogController::class, 'exportSystemLogs'])->name('export.system');
+            Route::get('/export/activity', [\App\Http\Controllers\Admin\LogController::class, 'exportActivityLogs'])->name('export.activity');
+            Route::delete('/system/{id}', [\App\Http\Controllers\Admin\LogController::class, 'deleteSystemLog'])->name('system.delete');
+            Route::delete('/activity/{id}', [\App\Http\Controllers\Admin\LogController::class, 'deleteActivityLog'])->name('activity.delete');
+            Route::patch('/system/{id}/resolve', [\App\Http\Controllers\Admin\LogController::class, 'resolveSystemLog'])->name('system.resolve');
+        });
     });
     
     // API Routes for dynamic loading
@@ -150,5 +162,44 @@ Route::middleware('auth')->group(function () {
         Route::get('personnel', [PersonnelController::class, 'getPersonnel'])->name('personnel');
         Route::get('equipment', [EquipmentController::class, 'getEquipment'])->name('equipment');
         Route::get('consumables', [ConsumableController::class, 'getConsumables'])->name('consumables');
+    });
+    
+    // Temporary debug route for testing logs dashboard
+    Route::get('/debug/logs', function() {
+        $stats = [
+            'errors' => \App\Models\SystemLog::where('level', 'error')->count(),
+            'warnings' => \App\Models\SystemLog::where('level', 'warning')->count(),
+            'activities' => \App\Models\ActivityLog::count(),
+            'resolved' => \App\Models\SystemLog::whereNotNull('resolved_at')->count(),
+        ];
+        
+        $recentErrors = \App\Models\SystemLog::where('level', 'error')->latest()->limit(5)->get();
+        $recentActivities = \App\Models\ActivityLog::with('user')->latest()->limit(5)->get();
+        
+        return response()->json([
+            'stats' => $stats,
+            'recent_errors_count' => $recentErrors->count(),
+            'recent_activities_count' => $recentActivities->count(),
+            'sample_error' => $recentErrors->first(),
+            'sample_activity' => $recentActivities->first()
+        ]);
+    });
+    
+    // Check current user role and log access
+    Route::get('/debug/user-role', function() {
+        if (!auth()->check()) {
+            return response()->json(['message' => 'Not logged in']);
+        }
+        
+        $user = auth()->user();
+        return response()->json([
+            'user' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'is_admin' => $user->isAdmin(),
+            'is_super_admin' => $user->isSuperAdmin(),
+            'can_access_logs' => $user->isSuperAdmin(),
+            'log_dashboard_url' => route('admin.logs.dashboard')
+        ]);
     });
 });

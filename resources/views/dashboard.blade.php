@@ -98,6 +98,74 @@
             </div>
         </div>
 
+        @if(Auth::user()->isSuperAdmin())
+        <!-- Super Admin Only - System Monitoring -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">System Errors</h6>
+                                <h2 class="mb-0">{{ App\Models\SystemLog::where('level', 'error')->count() }}</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-dark bg-opacity-25">
+                        <a href="{{ route('admin.logs.system') }}" class="text-white text-decoration-none">
+                            <i class="fas fa-eye me-1"></i> View System Logs
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">User Activities</h6>
+                                <h2 class="mb-0">{{ App\Models\ActivityLog::count() }}</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-user-clock fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-dark bg-opacity-25">
+                        <a href="{{ route('admin.logs.activity') }}" class="text-white text-decoration-none">
+                            <i class="fas fa-eye me-1"></i> View Activity Logs
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    System Monitoring Dashboard
+                                </h6>
+                                <p class="mb-0">Comprehensive logging and error tracking system</p>
+                            </div>
+                            <div>
+                                <a href="{{ route('admin.logs.dashboard') }}" class="btn btn-light btn-lg">
+                                    <i class="fas fa-tachometer-alt me-2"></i> Open Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Quick Actions -->
         <div class="row g-4 mb-4">
             <div class="col-md-6">
