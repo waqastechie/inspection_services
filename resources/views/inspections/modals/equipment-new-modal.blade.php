@@ -164,9 +164,12 @@ document.addEventListener('DOMContentLoaded', function() {
             placeholder: 'Search equipment...',
             allowClear: true,
             ajax: {
-                url: '/api/equipment',
+                url: '/inspections/api/equipment',
                 dataType: 'json',
                 delay: 250,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
                 data: function (params) {
                     return {
                         search: params.term,
@@ -174,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                 },
                 processResults: function (data, params) {
+                    console.log('Equipment API response:', data); // Debug log
                     return {
                         results: data.map(equipment => ({
                             id: equipment.id,

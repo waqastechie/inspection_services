@@ -24,13 +24,25 @@ class Equipment extends Model
         'maintenance_notes',
         'specifications',
         'is_active',
+        'parent_equipment_id',
+        'equipment_category',
+        'swl',
+        'test_load_applied',
+        'reason_for_examination',
+        'manufacture_date',
+        'last_examination_date',
+        'next_examination_date',
+        'examination_status',
+        'examination_notes',
     ];
 
     protected $casts = [
         'calibration_date' => 'date',
         'calibration_due' => 'date',
+        'manufacture_date' => 'date',
+        'last_examination_date' => 'date',
+        'next_examination_date' => 'date',
         'usage_hours' => 'decimal:2',
-        'specifications' => 'json',
         'is_active' => 'boolean',
     ];
 
@@ -111,5 +123,75 @@ class Equipment extends Model
     public function scopeByCondition($query, $condition)
     {
         return $query->where('condition', $condition);
+    }
+
+    /**
+     * Get parent equipment (for items)
+     */
+    public function parentEquipment()
+    {
+        return $this->belongsTo(Equipment::class, 'parent_equipment_id');
+    }
+
+    /**
+     * Get child equipment/items (for assets)
+     */
+    public function childEquipment()
+    {
+        return $this->hasMany(Equipment::class, 'parent_equipment_id');
+    }
+
+    /**
+     * Get all items under this asset
+     */
+    public function items()
+    {
+        return $this->hasMany(Equipment::class, 'parent_equipment_id')->where('equipment_category', 'item');
+    }
+
+    /**
+     * Scope for assets only
+     */
+    public function scopeAssets($query)
+    {
+        return $query->where('equipment_category', 'asset');
+    }
+
+    /**
+     * Scope for items only
+     */
+    public function scopeItems($query)
+    {
+        return $query->where('equipment_category', 'item');
+    }
+
+    /**
+     * Check if this equipment is an asset
+     */
+    public function getIsAssetAttribute(): bool
+    {
+        return $this->equipment_category === 'asset';
+    }
+
+    /**
+     * Check if this equipment is an item
+     */
+    public function getIsItemAttribute(): bool
+    {
+        return $this->equipment_category === 'item';
+    }
+
+    /**
+     * Get examination status color
+     */
+    public function getExaminationStatusColorAttribute(): string
+    {
+        return match($this->examination_status) {
+            'Pass' => 'success',
+            'Fail' => 'danger',
+            'C' => 'primary', // Current/Compliant
+            'ND' => 'secondary', // Not Done
+            default => 'secondary'
+        };
     }
 }

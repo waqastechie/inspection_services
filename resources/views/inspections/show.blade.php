@@ -91,22 +91,14 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <p><strong>Type:</strong> {{ $inspection->equipment_type }}</p>
-                            @if($inspection->equipment_description)
-                                <p><strong>Description:</strong> {{ $inspection->equipment_description }}</p>
-                            @endif
-                            @if($inspection->manufacturer)
-                                <p><strong>Manufacturer:</strong> {{ $inspection->manufacturer }}</p>
-                            @endif
-                            @if($inspection->model)
-                                <p><strong>Model:</strong> {{ $inspection->model }}</p>
-                            @endif
-                            @if($inspection->serial_number)
-                                <p><strong>Serial Number:</strong> {{ $inspection->serial_number }}</p>
-                            @endif
-                            @if($inspection->capacity)
-                                <p><strong>Capacity:</strong> {{ $inspection->capacity }} {{ $inspection->capacity_unit }}</p>
-                            @endif
+                            <p><strong>Type:</strong> {{ $inspection->equipment_type ?? '-' }}</p>
+                            <p><strong>Description:</strong> {{ $inspection->equipment_description ?? '-' }}</p>
+                            <p><strong>Manufacturer:</strong> {{ $inspection->manufacturer ?? '-' }}</p>
+                            <p><strong>Model:</strong> {{ $inspection->model ?? '-' }}</p>
+                            <p><strong>Serial Number:</strong> {{ $inspection->serial_number ?? '-' }}</p>
+                            <p><strong>Capacity:</strong> {{ $inspection->capacity ?? '-' }} {{ $inspection->capacity_unit ?? '' }}</p>
+                            <p><strong>Year:</strong> {{ $inspection->manufacture_year ?? '-' }}</p>
+                            <p><strong>Notes:</strong> {{ $inspection->general_notes ?? '-' }}</p>
                         </div>
                     </div>
                 </div>
@@ -125,19 +117,140 @@
                             <div class="card-body">
                                 <div class="row">
                                     @foreach($inspection->services as $service)
-                                        <div class="col-md-6 mb-3">
-                                            <div class="border rounded p-3">
-                                                <h6 class="text-primary">{{ $service->service_type_name }}</h6>
-                                                @if($service->service_data && is_array($service->service_data))
-                                                    @if(isset($service->service_data['description']))
-                                                        <p class="small text-muted mb-2">{{ $service->service_data['description'] }}</p>
+                                        <div class="col-lg-6 mb-4">
+                                            <div class="card h-100 shadow-sm">
+                                                <div class="card-header bg-light">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <h6 class="mb-0 text-primary fw-bold">
+                                                            <i class="fas fa-cog me-2"></i>{{ $service->service_type_name }}
+                                                        </h6>
+                                                        <span class="badge bg-{{ $service->status_color }} fs-6">{{ ucfirst($service->status) }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    @php
+                                                        $serviceData = is_string($service->service_data) ? json_decode($service->service_data, true) : $service->service_data;
+                                                        $serviceData = $serviceData ?: [];
+                                                    @endphp
+                                                    
+                                                    @if(isset($serviceData['service_name']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Service Name:</strong>
+                                                            <p class="mb-1">{{ $serviceData['service_name'] }}</p>
+                                                        </div>
                                                     @endif
-                                                @endif
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="badge bg-{{ $service->status_color }}">{{ ucfirst($service->status) }}</span>
+                                                    
+                                                    @if(isset($serviceData['service_description']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Description:</strong>
+                                                            <p class="mb-1 text-muted">{{ $serviceData['service_description'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    @if(isset($serviceData['test_parameters']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Test Parameters:</strong>
+                                                            <p class="mb-1">{{ $serviceData['test_parameters'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    @if(isset($serviceData['acceptance_criteria']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Acceptance Criteria:</strong>
+                                                            <p class="mb-1">{{ $serviceData['acceptance_criteria'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    @if(isset($serviceData['applicable_codes']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Applicable Codes:</strong>
+                                                            <p class="mb-1">{{ $serviceData['applicable_codes'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    <div class="row">
+                                                        @if(isset($serviceData['estimated_duration']))
+                                                            <div class="col-6">
+                                                                <div class="mb-3">
+                                                                    <strong class="text-primary">Duration:</strong>
+                                                                    <p class="mb-1">{{ $serviceData['estimated_duration'] }}</p>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                        
+                                                        @if(isset($serviceData['cost_estimate']))
+                                                            <div class="col-6">
+                                                                <div class="mb-3">
+                                                                    <strong class="text-primary">Cost Estimate:</strong>
+                                                                    <p class="mb-1">${{ number_format($serviceData['cost_estimate']) }}</p>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    
                                                     @if($service->notes)
-                                                        <small class="text-muted">{{ $service->notes }}</small>
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Service Notes:</strong>
+                                                            <div class="bg-light p-2 rounded">
+                                                                <p class="mb-0">{{ $service->notes }}</p>
+                                                            </div>
+                                                        </div>
                                                     @endif
+                                                    
+                                                    {{-- Show assigned inspector for this service if any --}}
+                                                    @php
+                                                        $serviceInspector = $inspection->personnelAssignments
+                                                            ->where('assignment_type', 'service_specific')
+                                                            ->where('assignment_details', 'like', '%"service_id":' . $service->id . '%')
+                                                            ->first();
+                                                    @endphp
+                                                    
+                                                    @if($serviceInspector)
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Assigned Inspector:</strong>
+                                                            <div class="d-flex align-items-center mt-1">
+                                                                <div class="bg-info bg-opacity-10 rounded-pill px-3 py-1">
+                                                                    <i class="fas fa-user-check text-info me-2"></i>
+                                                                    <span class="fw-semibold">{{ $serviceInspector->personnel->name }}</span>
+                                                                    <small class="text-muted ms-2">({{ $serviceInspector->role }})</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    {{-- Show service results if any --}}
+                                                    @if($service->results && $service->results->count() > 0)
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Results:</strong>
+                                                            <div class="mt-2">
+                                                                @foreach($service->results as $result)
+                                                                    <div class="border-start border-3 border-success ps-3 mb-2">
+                                                                        <div class="fw-semibold">{{ $result->result_type }}</div>
+                                                                        @if($result->result_value)
+                                                                            <div class="text-muted small">Value: {{ $result->result_value }} {{ $result->unit }}</div>
+                                                                        @endif
+                                                                        @if($result->notes)
+                                                                            <div class="text-muted small">{{ $result->notes }}</div>
+                                                                        @endif
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div class="card-footer bg-light">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Created: {{ $service->created_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                        @if($service->updated_at != $service->created_at)
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-edit me-1"></i>
+                                                                Updated: {{ $service->updated_at->format('M d, Y H:i') }}
+                                                            </small>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -358,6 +471,91 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Inspection Images -->
+            @php
+                $inspection_images = $inspection->inspection_images;
+                if (is_string($inspection_images)) {
+                    $inspection_images = json_decode($inspection_images, true) ?: [];
+                }
+                $inspection_images = $inspection_images ?: [];
+            @endphp
+            @if(is_array($inspection_images) && count($inspection_images) > 0)
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-camera me-2"></i>Inspection Images ({{ count($inspection_images) }})
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    @foreach($inspection_images as $index => $image)
+                                        @php
+                                            // Handle both complex image objects and simple file paths
+                                            if (is_string($image)) {
+                                                // Simple file path
+                                                $imageData = [
+                                                    'dataUrl' => asset($image),
+                                                    'name' => basename($image),
+                                                    'caption' => '',
+                                                    'size' => 'Unknown size',
+                                                    'uploadedAt' => null
+                                                ];
+                                            } else {
+                                                // Complex image object
+                                                $imageData = is_string($image) ? json_decode($image, true) : $image;
+                                            }
+                                        @endphp
+                                        @if($imageData && (isset($imageData['dataUrl']) || isset($imageData['url'])))
+                                            @php
+                                                $imageUrl = $imageData['dataUrl'] ?? $imageData['url'] ?? asset($image);
+                                                $imageName = $imageData['name'] ?? basename($image) ?? 'Inspection Image ' . ($index + 1);
+                                                $imageCaption = $imageData['caption'] ?? '';
+                                                $imageSize = $imageData['size'] ?? 'Unknown size';
+                                                $uploadDate = isset($imageData['uploadedAt']) ? \Carbon\Carbon::parse($imageData['uploadedAt'])->format('d/m/Y H:i') : null;
+                                            @endphp
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="card inspection-image-card h-100">
+                                                    <div class="position-relative">
+                                                        <img src="{{ $imageUrl }}" 
+                                                             alt="{{ $imageName }}" 
+                                                             class="card-img-top inspection-image-preview"
+                                                             style="height: 200px; object-fit: cover; cursor: pointer;"
+                                                             onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')">
+                                                        <div class="position-absolute top-0 end-0 m-2">
+                                                            <button type="button" class="btn btn-light btn-sm rounded-circle" 
+                                                                    onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')"
+                                                                    title="View Full Size">
+                                                                <i class="fas fa-expand"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <h6 class="card-title text-truncate" title="{{ $imageName }}">
+                                                            {{ $imageName }}
+                                                        </h6>
+                                                        @if(!empty($imageCaption))
+                                                            <p class="card-text small text-muted">{{ $imageCaption }}</p>
+                                                        @endif
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <small class="text-muted">{{ $imageSize }}</small>
+                                                            @if($uploadDate)
+                                                                <small class="text-muted">{{ $uploadDate }}</small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>
@@ -404,6 +602,64 @@
     </div>
 </div>
 
+<!-- Image View Modal -->
+<div class="modal fade" id="imageViewModal" tabindex="-1" aria-labelledby="imageViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageViewModalLabel">
+                    <i class="fas fa-image me-2"></i>
+                    <span id="imageModalTitle">Inspection Image</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-2">
+                <img id="imageModalImg" src="" alt="" class="img-fluid" style="max-height: 80vh; object-fit: contain;">
+                <div id="imageModalCaption" class="mt-3 text-muted" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Close
+                </button>
+                <a id="imageDownloadLink" href="" download="" class="btn btn-primary">
+                    <i class="fas fa-download me-2"></i>Download Image
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.inspection-image-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.inspection-image-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.inspection-image-preview {
+    transition: transform 0.2s ease-in-out;
+}
+
+.inspection-image-preview:hover {
+    transform: scale(1.02);
+}
+
+@media print {
+    .inspection-image-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .inspection-image-preview {
+        height: auto !important;
+        max-height: 300px;
+    }
+}
+</style>
+
 <script>
 function confirmDelete(inspectionId, inspectionNumber) {
     document.getElementById('deleteInspectionNumber').textContent = inspectionNumber;
@@ -411,6 +667,35 @@ function confirmDelete(inspectionId, inspectionNumber) {
     
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
+}
+
+function showImageModal(imageSrc, imageName, imageCaption) {
+    const modal = document.getElementById('imageViewModal');
+    const modalImg = document.getElementById('imageModalImg');
+    const modalTitle = document.getElementById('imageModalTitle');
+    const modalCaption = document.getElementById('imageModalCaption');
+    const downloadLink = document.getElementById('imageDownloadLink');
+    
+    // Set image source and title
+    modalImg.src = imageSrc;
+    modalImg.alt = imageName;
+    modalTitle.textContent = imageName;
+    
+    // Set caption if available
+    if (imageCaption && imageCaption.trim() !== '') {
+        modalCaption.textContent = imageCaption;
+        modalCaption.style.display = 'block';
+    } else {
+        modalCaption.style.display = 'none';
+    }
+    
+    // Set download link
+    downloadLink.href = imageSrc;
+    downloadLink.download = imageName;
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
 }
 </script>
 @endsection

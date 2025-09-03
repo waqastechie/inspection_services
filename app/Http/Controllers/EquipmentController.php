@@ -14,7 +14,10 @@ class EquipmentController extends Controller
      */
     public function index()
     {
-        $equipment = Equipment::orderBy('name')->paginate(20);
+        $equipment = Equipment::with(['parentEquipment', 'items'])
+            ->orderBy('equipment_category', 'asc') // Assets first, then items
+            ->orderBy('name')
+            ->paginate(20);
         return view('admin.equipment.index', compact('equipment'));
     }
 
@@ -42,7 +45,7 @@ class EquipmentController extends Controller
             'condition' => 'required|in:excellent,good,fair,needs_maintenance,out_of_service',
             'usage_hours' => 'nullable|numeric|min:0',
             'maintenance_notes' => 'nullable|string',
-            'specifications' => 'nullable|array',
+            'specifications' => 'nullable|string|max:2000',
             'is_active' => 'boolean',
         ]);
 
@@ -90,7 +93,7 @@ class EquipmentController extends Controller
             'condition' => 'required|in:excellent,good,fair,needs_maintenance,out_of_service',
             'usage_hours' => 'nullable|numeric|min:0',
             'maintenance_notes' => 'nullable|string',
-            'specifications' => 'nullable|array',
+            'specifications' => 'nullable|string|max:2000',
             'is_active' => 'boolean',
         ]);
 
@@ -135,6 +138,18 @@ class EquipmentController extends Controller
     {
         $query = Equipment::active();
 
+        // Default to showing assets, but allow showing items if specified
+        if ($request->has('category')) {
+            if ($request->category === 'assets') {
+                $query->assets();
+            } elseif ($request->category === 'items') {
+                $query->items();
+            }
+        } else {
+            // Default to assets only
+            $query->assets();
+        }
+
         if ($request->has('type')) {
             $query->byType($request->type);
         }
@@ -143,8 +158,109 @@ class EquipmentController extends Controller
             $query->byCondition($request->condition);
         }
 
-        $equipment = $query->get(['id', 'name', 'type', 'brand_model', 'serial_number', 'condition']);
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('brand_model', 'LIKE', "%{$search}%")
+                  ->orWhere('serial_number', 'LIKE', "%{$search}%")
+                  ->orWhere('type', 'LIKE', "%{$search}%");
+            });
+        }
 
-        return response()->json($equipment);
+        $equipment = $query->with('items')->get([
+            'id', 
+            'name', 
+            'type', 
+            'brand_model', 
+            'serial_number', 
+            'condition',
+            'calibration_date',
+            'calibration_due',
+            'calibration_certificate',
+            'maintenance_notes',
+            'equipment_category',
+            'swl',
+            'reason_for_examination'
+        ]);
+
+        // Transform the data to match the expected format
+        $transformedEquipment = $equipment->map(function($item) {
+            $display_name = $item->name;
+            if ($item->equipment_category === 'asset' && $item->items->count() > 0) {
+                $display_name .= " ({$item->items->count()} items)";
+            }
+            
+            return [
+                'id' => $item->id,
+                'equipment_name' => $display_name,
+                'equipment_type' => $item->type,
+                'brand_model' => $item->brand_model,
+                'serial_number' => $item->serial_number,
+                'condition' => $item->condition,
+                'calibration_date' => $item->calibration_date ? $item->calibration_date->format('Y-m-d') : null,
+                'calibration_due' => $item->calibration_due ? $item->calibration_due->format('Y-m-d') : null,
+                'calibration_certificate' => $item->calibration_certificate,
+                'maintenance_notes' => $item->maintenance_notes,
+                'equipment_category' => $item->equipment_category,
+                'swl' => $item->swl,
+                'reason_for_examination' => $item->reason_for_examination,
+                'items_count' => $item->equipment_category === 'asset' ? $item->items->count() : 0,
+            ];
+        });
+
+        return response()->json($transformedEquipment);
+    }
+
+    /**
+     * API endpoint to get items for a specific equipment asset
+     */
+    public function getEquipmentItems($id)
+    {
+        $asset = Equipment::findOrFail($id);
+        
+        if ($asset->equipment_category !== 'asset') {
+            return response()->json(['error' => 'Equipment must be an asset to have items'], 400);
+        }
+
+        $items = $asset->items()->get([
+            'id',
+            'name',
+            'type',
+            'serial_number',
+            'swl',
+            'test_load_applied',
+            'examination_status',
+            'manufacture_date',
+            'next_examination_date',
+            'specifications',
+            'condition'
+        ]);
+
+        $transformedItems = $items->map(function($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'type' => $item->type,
+                'serial_number' => $item->serial_number,
+                'swl' => $item->swl,
+                'test_load_applied' => $item->test_load_applied,
+                'examination_status' => $item->examination_status,
+                'manufacture_date' => $item->manufacture_date ? $item->manufacture_date->format('Y-m-d') : null,
+                'next_examination_date' => $item->next_examination_date ? $item->next_examination_date->format('Y-m-d') : null,
+                'specifications' => $item->specifications,
+                'condition' => $item->condition,
+            ];
+        });
+
+        return response()->json([
+            'asset' => [
+                'id' => $asset->id,
+                'name' => $asset->name,
+                'serial_number' => $asset->serial_number,
+                'reason_for_examination' => $asset->reason_for_examination
+            ],
+            'items' => $transformedItems
+        ]);
     }
 }

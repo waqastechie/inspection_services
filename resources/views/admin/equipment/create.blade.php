@@ -17,6 +17,54 @@
                         @csrf
                         
                         <div class="row">
+                            <!-- Equipment Category -->
+                            <div class="col-12 mb-4">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">Equipment Category</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="equipment_category" id="category_asset" value="asset" {{ old('equipment_category', 'asset') === 'asset' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="category_asset">
+                                                        <i class="fas fa-box text-primary"></i> <strong>Asset</strong>
+                                                        <small class="d-block text-muted">Main equipment piece (e.g., Gas Rack, Crane)</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="equipment_category" id="category_item" value="item" {{ old('equipment_category') === 'item' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="category_item">
+                                                        <i class="fas fa-cog text-info"></i> <strong>Item/Component</strong>
+                                                        <small class="d-block text-muted">Part of an asset (e.g., Wire Rope, Safety Pin)</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="parent_equipment_section" class="mt-3" style="display: none;">
+                                            <label for="parent_equipment_id" class="form-label">Parent Asset *</label>
+                                            <select class="form-select @error('parent_equipment_id') is-invalid @enderror" id="parent_equipment_id" name="parent_equipment_id">
+                                                <option value="">Select Parent Asset</option>
+                                                @foreach(\App\Models\Equipment::assets()->get() as $asset)
+                                                    <option value="{{ $asset->id }}" {{ old('parent_equipment_id') == $asset->id ? 'selected' : '' }}>
+                                                        {{ $asset->name }} ({{ $asset->serial_number }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error('parent_equipment_id')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <!-- Basic Information -->
                             <div class="col-md-6">
                                 <h5 class="mb-3">Basic Information</h5>
@@ -132,21 +180,125 @@
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="specifications" class="form-label">Specifications</label>
+                                    <label for="specifications" class="form-label">
+                                        Specifications
+                                        <i class="fas fa-info-circle text-primary" data-bs-toggle="tooltip" 
+                                           title="Enter technical specifications, operating parameters, or key features"></i>
+                                    </label>
                                     <textarea class="form-control @error('specifications') is-invalid @enderror" 
-                                              id="specifications" name="specifications" rows="3">{{ old('specifications') }}</textarea>
+                                              id="specifications" name="specifications" rows="4" 
+                                              placeholder="e.g., Range: 0-100mm, Frequency: 5MHz, Accuracy: ±0.1mm, Operating Temperature: -10°C to +50°C">{{ old('specifications') }}</textarea>
                                     @error('specifications')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div class="form-text">
+                                        <small class="text-muted">Enter technical specifications, operating ranges, accuracy, etc.</small>
+                                    </div>
                                 </div>
-                            </div>
-
+                            </div>                            
+                            
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="notes" class="form-label">Notes</label>
                                     <textarea class="form-control @error('notes') is-invalid @enderror" 
                                               id="notes" name="notes" rows="3">{{ old('notes') }}</textarea>
                                     @error('notes')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inspection Fields (for Items) -->
+                        <div id="inspection_fields" class="row mt-4" style="display: none;">
+                            <div class="col-12">
+                                <h5 class="mb-3"><i class="fas fa-search text-info"></i> Inspection Information</h5>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="swl" class="form-label">SWL (Safe Working Load)</label>
+                                    <input type="text" class="form-control @error('swl') is-invalid @enderror" 
+                                           id="swl" name="swl" value="{{ old('swl') }}" placeholder="e.g., 1472 Kg, 8.7 T @ 30°">
+                                    @error('swl')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="test_load_applied" class="form-label">Test Load Applied</label>
+                                    <input type="text" class="form-control @error('test_load_applied') is-invalid @enderror" 
+                                           id="test_load_applied" name="test_load_applied" value="{{ old('test_load_applied') }}" placeholder="e.g., 5400 Kg, N/A">
+                                    @error('test_load_applied')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="examination_status" class="form-label">Examination Status</label>
+                                    <select class="form-select @error('examination_status') is-invalid @enderror" id="examination_status" name="examination_status">
+                                        <option value="ND" {{ old('examination_status', 'ND') === 'ND' ? 'selected' : '' }}>ND (Not Done)</option>
+                                        <option value="C" {{ old('examination_status') === 'C' ? 'selected' : '' }}>C (Compliant)</option>
+                                        <option value="Pass" {{ old('examination_status') === 'Pass' ? 'selected' : '' }}>Pass</option>
+                                        <option value="Fail" {{ old('examination_status') === 'Fail' ? 'selected' : '' }}>Fail</option>
+                                    </select>
+                                    @error('examination_status')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="manufacture_date" class="form-label">Manufacture Date</label>
+                                    <input type="date" class="form-control @error('manufacture_date') is-invalid @enderror" 
+                                           id="manufacture_date" name="manufacture_date" value="{{ old('manufacture_date') }}">
+                                    @error('manufacture_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="last_examination_date" class="form-label">Last Examination Date</label>
+                                    <input type="date" class="form-control @error('last_examination_date') is-invalid @enderror" 
+                                           id="last_examination_date" name="last_examination_date" value="{{ old('last_examination_date') }}">
+                                    @error('last_examination_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="next_examination_date" class="form-label">Next Examination Date</label>
+                                    <input type="date" class="form-control @error('next_examination_date') is-invalid @enderror" 
+                                           id="next_examination_date" name="next_examination_date" value="{{ old('next_examination_date') }}">
+                                    @error('next_examination_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Asset Fields (for Assets) -->
+                        <div id="asset_fields" class="row mt-4">
+                            <div class="col-12">
+                                <h5 class="mb-3"><i class="fas fa-clipboard-list text-primary"></i> Asset Information</h5>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="reason_for_examination" class="form-label">Reason for Examination</label>
+                                    <textarea class="form-control @error('reason_for_examination') is-invalid @enderror" 
+                                              id="reason_for_examination" name="reason_for_examination" rows="2"
+                                              placeholder="e.g., A: New Installation, B: 6 Monthly, C: 12 Monthly, D: Written Scheme, E: Exceptional Circumstances">{{ old('reason_for_examination') }}</textarea>
+                                    @error('reason_for_examination')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -168,3 +320,35 @@
     </div>
 </div>
 @endsection
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryRadios = document.querySelectorAll('input[name="equipment_category"]');
+    const parentEquipmentSection = document.getElementById('parent_equipment_section');
+    const inspectionFields = document.getElementById('inspection_fields');
+    const assetFields = document.getElementById('asset_fields');
+
+    function toggleFieldsBasedOnCategory() {
+        const selectedCategory = document.querySelector('input[name="equipment_category"]:checked').value;
+        
+        if (selectedCategory === 'item') {
+            parentEquipmentSection.style.display = 'block';
+            inspectionFields.style.display = 'block';
+            assetFields.style.display = 'none';
+            document.getElementById('parent_equipment_id').required = true;
+        } else {
+            parentEquipmentSection.style.display = 'none';
+            inspectionFields.style.display = 'none';
+            assetFields.style.display = 'block';
+            document.getElementById('parent_equipment_id').required = false;
+        }
+    }
+
+    categoryRadios.forEach(radio => {
+        radio.addEventListener('change', toggleFieldsBasedOnCategory);
+    });
+
+    // Initialize on page load
+    toggleFieldsBasedOnCategory();
+});
+</script>

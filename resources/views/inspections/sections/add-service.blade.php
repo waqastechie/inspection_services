@@ -94,7 +94,7 @@
         </div>
 
         <!-- Selected Services Display -->
-        <div class="selected-services-container">
+        <div class="selected-services-container mt-4">
             <div class="alert alert-info" id="selectedServicesAlert" style="display: none;">
                 <h6 class="alert-heading mb-2">
                     <i class="fas fa-check-circle me-2"></i>
@@ -306,5 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sectionIndicator.className = 'fas fa-check-circle text-success';
         }
     }
+
 });
 </script>

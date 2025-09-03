@@ -38,9 +38,9 @@
                         <td>
                             <select name="overall_result" class="form-select">
                                 <option value="">Select result...</option>
-                                <option value="satisfactory">Satisfactory</option>
-                                <option value="unsatisfactory">Unsatisfactory</option>
-                                <option value="conditional">Conditional</option>
+                                <option value="pass">Pass</option>
+                                <option value="fail">Fail</option>
+                                <option value="conditional_pass">Conditional Pass</option>
                             </select>
                         </td>
                     </tr>

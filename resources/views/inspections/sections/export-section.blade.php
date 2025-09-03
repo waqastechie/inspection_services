@@ -2,11 +2,11 @@
 <section class="form-section" id="section-export">
     <div class="section-header">
         <h2 class="section-title">
-            <i class="fas fa-file-export"></i>
-            Save & Export Report
+            <i class="fas fa-save"></i>
+            Save Report
         </h2>
         <p class="section-description">
-            Your data is automatically saved as you type. Submit the report to enable PDF export.
+            Your data is automatically saved as you type. Submit the report to finalize it.
         </p>
     </div>
 
@@ -42,7 +42,7 @@
                     </div>
                     <div class="flex-grow-1">
                         <h6 class="alert-heading mb-1">Ready to Submit</h6>
-                        <p class="mb-0">Your data is being automatically saved. Click "Submit Report" to finalize and enable PDF export.</p>
+                        <p class="mb-0">Your data is being automatically saved. Click "Submit Report" to finalize the inspection.</p>
                     </div>
                 </div>
             </div>
@@ -50,7 +50,7 @@
 
         <!-- Action Buttons -->
         <div class="row g-4">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="export-option-card">
                     <div class="card h-100">
                         <div class="card-body text-center">
@@ -59,7 +59,7 @@
                             </div>
                             <h5 class="card-title">Submit Report</h5>
                             <p class="card-text">
-                                Finalize and submit the inspection report. This will enable PDF export options.
+                                Finalize and submit the inspection report.
                             </p>
                             <button type="submit" class="btn btn-success btn-lg" id="saveReportBtn">
                                 <i class="fas fa-check me-2"></i>
@@ -75,56 +75,12 @@
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-6">
-                <div class="export-option-card">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <div class="export-icon mb-3">
-                                <i class="fas fa-file-pdf fa-3x text-danger"></i>
-                            </div>
-                            <h5 class="card-title">Export as PDF</h5>
-                            <p class="card-text">
-                                Generate a professional PDF report suitable for printing and distribution.
-                            </p>
-                            <div class="btn-group-vertical w-100" id="pdfButtonGroup">
-                                <button type="button" class="btn btn-danger btn-lg" id="exportPDFBtn" disabled>
-                                    <i class="fas fa-file-pdf me-2"></i>
-                                    Generate PDF Report
-                                </button>
-                                <button type="button" class="btn btn-outline-info btn-sm" id="previewPDFBtn" disabled>
-                                    <i class="fas fa-eye me-2"></i>
-                                    Preview PDF
-                                </button>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Submit report first to enable PDF export
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Auto-save Status -->
-        <div class="mt-4">
-            <div class="d-flex justify-content-center">
-                <div class="auto-save-status">
-                    <small class="text-muted">
-                        <i class="fas fa-clock me-1"></i>
-                        <span id="autoSaveStatus">Auto-save enabled</span>
-                    </small>
-                </div>
-            </div>
         </div>
 
         <!-- Progress Indicator -->
         <div class="mt-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted">Auto-Save Progress</span>
+                <span class="text-muted">Completion Progress</span>
                 <span class="text-muted" id="completionPercentage">Ready</span>
             </div>
             <div class="progress" style="height: 10px;">

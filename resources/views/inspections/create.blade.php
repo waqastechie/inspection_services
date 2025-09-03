@@ -53,8 +53,6 @@
                     
                     @include('inspections.sections.consumables')
                     
-                    @include('inspections.sections.personnel-assignment')
-                    
                     @include('inspections.sections.comments')
                     
                     @include('inspections.sections.image-upload')
@@ -75,7 +73,6 @@
 <!-- New Modal-Based Entry Modals -->
 @include('inspections.modals.asset-modal')
 @include('inspections.modals.item-modal')
-@include('inspections.modals.personnel-new-modal')
 @include('inspections.modals.equipment-new-modal')
 @include('inspections.modals.consumable-new-modal')
 

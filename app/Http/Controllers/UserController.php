@@ -32,16 +32,25 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        // Dynamic validation rules based on role
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:admin,inspector,viewer',
             'phone' => 'nullable|string|max:20',
             'department' => 'nullable|string|max:255',
-            'certification' => 'nullable|string|max:255',
             'certification_expiry' => 'nullable|date|after:today',
-        ]);
+        ];
+
+        // Make certification required for inspector and admin roles
+        if (in_array($request->role, ['inspector', 'admin'])) {
+            $rules['certification'] = 'required|string|min:10|max:1000';
+        } else {
+            $rules['certification'] = 'nullable|string|max:1000';
+        }
+
+        $request->validate($rules);
 
         // Prevent non-super-admin from creating super admin
         if ($request->role === 'super_admin' && !Auth::user()->isSuperAdmin()) {
@@ -94,17 +103,26 @@ class UserController extends Controller
             abort(403, 'You cannot edit super admin users.');
         }
 
-        $request->validate([
+        // Dynamic validation rules based on role
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'role' => 'required|in:admin,inspector,viewer',
             'phone' => 'nullable|string|max:20',
             'department' => 'nullable|string|max:255',
-            'certification' => 'nullable|string|max:255',
             'certification_expiry' => 'nullable|date|after:today',
             'is_active' => 'boolean',
-        ]);
+        ];
+
+        // Make certification required for inspector and admin roles
+        if (in_array($request->role, ['inspector', 'admin'])) {
+            $rules['certification'] = 'required|string|min:10|max:1000';
+        } else {
+            $rules['certification'] = 'nullable|string|max:1000';
+        }
+
+        $request->validate($rules);
 
         $data = [
             'name' => $request->name,

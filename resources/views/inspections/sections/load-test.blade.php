@@ -18,6 +18,24 @@
     </div>
 
     <div class="section-content">
+        <!-- Inspector Assignment -->
+        <div class="inspection-question mb-4">
+            <label class="form-label fw-bold">
+                <i class="fas fa-user-check me-2"></i>Assigned Inspector
+            </label>
+            <select class="form-control" name="load_test_inspector" required>
+                <option value="">Select Inspector</option>
+                @if(isset($personnel))
+                    @foreach($personnel as $person)
+                        <option value="{{ $person->id }}" 
+                                {{ old('load_test_inspector', $inspection?->load_test_inspector ?? '') == $person->id ? 'selected' : '' }}>
+                            {{ $person->first_name }} {{ $person->last_name }} - {{ $person->job_title }}
+                        </option>
+                    @endforeach
+                @endif
+            </select>
+        </div>
+
         <div class="row g-4">
             <div class="col-md-6">
                 <label class="form-label fw-semibold">

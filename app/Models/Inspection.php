@@ -16,6 +16,18 @@ class Inspection extends Model
         'client_name',
         'project_name',
         'location',
+        'area_of_examination',
+        'services_performed',
+        'contract',
+        'work_order',
+        'purchase_order',
+        'client_job_reference',
+        'job_ref',
+        'standards',
+        'local_procedure_number',
+        'drawing_number',
+        'test_restrictions',
+        'surface_condition',
         'inspection_date',
         'weather_conditions',
         'temperature',
@@ -39,6 +51,7 @@ class Inspection extends Model
         'previous_certificate_number',
         'last_inspection_date',
         'next_inspection_due',
+        'next_inspection_date',
         
         // Test Results
         'overall_result',
@@ -52,8 +65,17 @@ class Inspection extends Model
         'inspector_signature',
         'report_date',
         
+        // Service Inspector Assignments
+        'lifting_examination_inspector',
+        'load_test_inspector',
+        'thorough_examination_inspector',
+        'mpi_service_inspector',
+        'visual_inspector',
+        
         // Additional Notes
         'general_notes',
+        'inspector_comments',
+        'service_notes',
         'attachments',
         'inspection_images',
         'status',
@@ -63,11 +85,54 @@ class Inspection extends Model
         'inspection_date' => 'date',
         'last_inspection_date' => 'date',
         'next_inspection_due' => 'date',
+        'next_inspection_date' => 'date',
         'report_date' => 'date',
         'inspection_images' => 'array',
         'attachments' => 'array',
+        'service_notes' => 'array',
         'capacity' => 'decimal:2',
     ];
+
+    /**
+     * Ensure inspection_images is always an array
+     */
+    public function getInspectionImagesAttribute($value)
+    {
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+        return $value ?? [];
+    }
+
+    /**
+     * Ensure inspection_images is stored as JSON
+     */
+    public function setInspectionImagesAttribute($value)
+    {
+        $this->attributes['inspection_images'] = is_array($value) ? json_encode($value) : $value;
+    }
+
+    /**
+     * Ensure attachments is always an array
+     */
+    public function getAttachmentsAttribute($value)
+    {
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+        return $value ?? [];
+    }
+
+    /**
+     * Ensure service_notes is always an array
+     */
+    public function getServiceNotesAttribute($value)
+    {
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+        return $value ?? [];
+    }
 
     /**
      * Get the services for the inspection.
@@ -150,5 +215,45 @@ class Inspection extends Model
             'conditional_pass' => 'warning',
             default => 'secondary'
         };
+    }
+
+    /**
+     * Get the lifting examination inspector
+     */
+    public function liftingExaminationInspector()
+    {
+        return $this->belongsTo(Personnel::class, 'lifting_examination_inspector');
+    }
+
+    /**
+     * Get the load test inspector
+     */
+    public function loadTestInspector()
+    {
+        return $this->belongsTo(Personnel::class, 'load_test_inspector');
+    }
+
+    /**
+     * Get the thorough examination inspector
+     */
+    public function thoroughExaminationInspector()
+    {
+        return $this->belongsTo(Personnel::class, 'thorough_examination_inspector');
+    }
+
+    /**
+     * Get the MPI service inspector
+     */
+    public function mpiServiceInspector()
+    {
+        return $this->belongsTo(Personnel::class, 'mpi_service_inspector');
+    }
+
+    /**
+     * Get the visual inspector
+     */
+    public function visualInspector()
+    {
+        return $this->belongsTo(Personnel::class, 'visual_inspector');
     }
 }

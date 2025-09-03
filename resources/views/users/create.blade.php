@@ -68,6 +68,10 @@
                                     @error('role')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle text-primary"></i>
+                                        <strong>Note:</strong> Certification will be required for Admin and Inspector roles
+                                    </div>
                                 </div>
                             </div>
 
@@ -94,12 +98,35 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="certification" class="form-label">Certification</label>
-                                    <input type="text" class="form-control @error('certification') is-invalid @enderror" 
-                                           id="certification" name="certification" value="{{ old('certification') }}">
+                                    <label for="certification" class="form-label">
+                                        Certification/Qualification <span class="text-info">*</span>
+                                    </label>
+                                    
+                                    <!-- Quick Select Common Certifications -->
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted">Quick Select (Click to add):</label>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="NDT Level II Certified">NDT Level II</button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="Lifting Equipment Inspector">Lifting Equipment</button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="Certified Welding Inspector (CWI)">CWI</button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="ASNT MT/PT Level III">ASNT Level III</button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="API 570 Piping Inspector">API 570</button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm cert-btn" data-cert="CSWIP Welding Inspector">CSWIP</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <textarea class="form-control @error('certification') is-invalid @enderror" 
+                                              id="certification" name="certification" rows="4" 
+                                              placeholder="Enter certifications, qualifications, licenses, and expertise areas..."
+                                              required>{{ old('certification') }}</textarea>
                                     @error('certification')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle text-primary"></i>
+                                        <strong>This field will auto-populate in inspection forms.</strong> Include all relevant certifications, 
+                                        license numbers, expiry dates, and areas of expertise.
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -152,6 +179,85 @@ document.addEventListener('DOMContentLoaded', function() {
     if (certificationExpiry) {
         certificationExpiry.min = tomorrow.toISOString().split('T')[0];
     }
+    
+    // Handle quick certification selection
+    const certificationTextarea = document.getElementById('certification');
+    const certButtons = document.querySelectorAll('.cert-btn');
+    
+    certButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const certText = this.dataset.cert;
+            const currentValue = certificationTextarea.value.trim();
+            
+            // Check if certification already exists
+            if (currentValue.toLowerCase().includes(certText.toLowerCase())) {
+                // Highlight the button briefly to show it's already added
+                this.classList.add('btn-warning');
+                this.innerHTML = '<i class="fas fa-check"></i> Already Added';
+                setTimeout(() => {
+                    this.classList.remove('btn-warning');
+                    this.innerHTML = this.textContent.replace('✓ Already Added', '').trim();
+                }, 2000);
+                return;
+            }
+            
+            // Add certification to textarea
+            if (currentValue) {
+                certificationTextarea.value = currentValue + '\n• ' + certText;
+            } else {
+                certificationTextarea.value = '• ' + certText;
+            }
+            
+            // Visual feedback
+            this.classList.add('btn-success');
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check"></i> Added';
+            
+            setTimeout(() => {
+                this.classList.remove('btn-success');
+                this.innerHTML = originalText;
+            }, 2000);
+            
+            // Focus textarea
+            certificationTextarea.focus();
+        });
+    });
+    
+    // Role-based certification requirements
+    const roleSelect = document.getElementById('role');
+    const certificationField = document.getElementById('certification');
+    const certificationLabel = document.querySelector('label[for="certification"]');
+    
+    function updateCertificationRequirement() {
+        const selectedRole = roleSelect.value;
+        const isRequired = ['inspector', 'admin'].includes(selectedRole);
+        
+        if (isRequired) {
+            certificationField.required = true;
+            certificationLabel.innerHTML = 'Certification/Qualification <span class="text-danger">*</span>';
+            certificationField.classList.add('border-warning');
+            
+            if (selectedRole === 'inspector' && !certificationField.value.trim()) {
+                certificationField.placeholder = 'e.g., NDT Level II Certified\n• Lifting Equipment Inspector\n• ASNT MT/PT Level III\n• Valid until: 2026-12-31';
+            } else if (selectedRole === 'admin' && !certificationField.value.trim()) {
+                certificationField.placeholder = 'e.g., Senior Inspector\n• Management Certification\n• Technical Review Authority\n• 10+ years experience';
+            }
+        } else {
+            certificationField.required = false;
+            certificationLabel.innerHTML = 'Certification/Qualification <span class="text-info">*</span>';
+            certificationField.classList.remove('border-warning');
+            
+            if (selectedRole === 'viewer') {
+                certificationField.placeholder = 'e.g., Technical Support\n• Quality Assurance\n• Documentation Specialist';
+            }
+        }
+    }
+    
+    roleSelect.addEventListener('change', updateCertificationRequirement);
+    
+    // Initialize on page load
+    updateCertificationRequirement();
 });
 </script>
 @endsection

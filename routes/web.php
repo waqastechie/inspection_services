@@ -35,6 +35,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/personnel', [InspectionController::class, 'getPersonnel'])->name('api.personnel');
         Route::get('/api/inspectors', [InspectionController::class, 'getInspectors'])->name('api.inspectors');
         Route::get('/api/clients', [ClientController::class, 'getClients'])->name('api.clients');
+        Route::get('/api/equipment', [EquipmentController::class, 'getEquipment'])->name('api.equipment');
+        Route::get('/api/equipment/{id}/items', [EquipmentController::class, 'getEquipmentItems'])->name('api.equipment.items');
+        
+        // Draft management API routes
+        Route::post('/api/drafts/save', [InspectionController::class, 'saveDraft'])->name('api.drafts.save');
+        Route::get('/api/drafts/{draftId}', [InspectionController::class, 'getDraft'])->name('api.drafts.get');
+        Route::delete('/api/drafts/{draftId}', [InspectionController::class, 'deleteDraft'])->name('api.drafts.delete');
         
         // Simple test routes
         Route::get('/test-users', function() {
@@ -49,6 +56,16 @@ Route::middleware('auth')->group(function () {
         // Test route for API debugging
         Route::get('/test-api', function () {
             return view('test-api');
+        });
+        
+        // Test route for form submission
+        Route::get('/test-form-submission', function () {
+            return view('test-form-submission');
+        });
+        
+        // Test route for AJAX submission
+        Route::get('/test-ajax-submission', function () {
+            return view('test-ajax-submission');
         });
         
         // Debug route for dropdown testing
@@ -164,6 +181,23 @@ Route::middleware('auth')->group(function () {
         Route::get('consumables', [ConsumableController::class, 'getConsumables'])->name('consumables');
     });
     
+    // Debug route for equipment API
+    Route::get('/debug/equipment', function() {
+        try {
+            $equipment = \App\Models\Equipment::active()->get();
+            return response()->json([
+                'success' => true,
+                'count' => $equipment->count(),
+                'data' => $equipment->toArray()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    });
+
     // Temporary debug route for testing logs dashboard
     Route::get('/debug/logs', function() {
         $stats = [

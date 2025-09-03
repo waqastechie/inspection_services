@@ -26,7 +26,7 @@
                             <option value="{{ $inspection->client_name }}" selected>{{ $inspection->client_name }}</option>
                         @endif
                     </select>
-                    <div class="form-text">Start typing to search for existing clients</div>
+                    <div class="form-text">Start typing to search for existing clients. The client name will be automatically populated below.</div>
                 </div>
                 @endif
                 
@@ -37,6 +37,7 @@
                            id="clientName" name="client_name" 
                            value="{{ old('client_name', $inspection?->client_name ?? '') }}" 
                            placeholder="e.g., Saipem Trechville" required>
+                    <div class="form-text">This field will be auto-filled when you select a client above.</div>
                     @error('client_name')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -99,10 +100,38 @@
 
                 <!-- Services -->
                 <div class="mb-3">
-                    <label for="services" class="form-label">Services</label>
-                    <input type="text" class="form-control" name="services" 
-                           value="{{ old('services', $inspection?->services ?? '') }}" 
+                    <label for="services" class="form-label">Services Performed</label>
+                    <input type="text" class="form-control" name="services_performed" 
+                           value="{{ old('services_performed', $inspection?->services_performed ?? '') }}" 
                            placeholder="e.g., Load Test, Lifting Examination, Thorough Examination, MPI, Visual">
+                </div>
+
+                <!-- Weather Conditions -->
+                <div class="mb-3">
+                    <label for="weatherConditions" class="form-label">Weather Conditions</label>
+                    <input type="text" class="form-control" name="weather_conditions" 
+                           value="{{ old('weather_conditions', $inspection?->weather_conditions ?? '') }}" 
+                           placeholder="e.g., Clear, Overcast, Light Rain">
+                </div>
+
+                <!-- Temperature and Humidity -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="temperature" class="form-label">Temperature (°C)</label>
+                            <input type="number" class="form-control" name="temperature" 
+                                   value="{{ old('temperature', $inspection?->temperature ?? '') }}" 
+                                   placeholder="25" step="0.1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="humidity" class="form-label">Humidity (%)</label>
+                            <input type="number" class="form-control" name="humidity" 
+                                   value="{{ old('humidity', $inspection?->humidity ?? '') }}" 
+                                   placeholder="65" min="0" max="100">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -175,52 +204,6 @@
                        value="{{ old('surface_condition', $inspection?->surface_condition ?? '') }}" 
                        placeholder="Acceptable for inspection">
             </div>
-        </div>
-
-        <!-- INSPECTOR DETAILS -->
-        <div class="row g-4 mt-4">
-            <div class="col-12">
-                <h5 class="mb-3">Inspector Details</h5>
-            </div>
-            
-            @if(auth()->user() && in_array(auth()->user()->role, ['admin', 'super_admin']))
-            <div class="col-md-6">
-                <label for="leadInspectorName" class="form-label">Lead Inspector Name *</label>
-                <select id="leadInspectorName" name="lead_inspector_name" class="form-control searchable-dropdown" required>
-                    <option value="">Select Inspector...</option>
-                    @if(isset($inspection) && $inspection->lead_inspector_name)
-                        <option value="{{ $inspection->lead_inspector_name }}" selected>{{ $inspection->lead_inspector_name }}</option>
-                    @endif
-                </select>
-                @error('lead_inspector_name')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="col-md-6">
-                <label for="leadInspectorCertification" class="form-label">Qualification *</label>
-                <textarea class="form-control @error('lead_inspector_certification') is-invalid @enderror" 
-                          id="leadInspectorCertification" name="lead_inspector_certification" 
-                          rows="2" placeholder="Auto-populated when inspector selected" required>{{ old('lead_inspector_certification', $inspection->lead_inspector_certification ?? '') }}</textarea>
-                @error('lead_inspector_certification')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-            @else
-            <!-- For regular inspectors, use their logged-in credentials -->
-            <input type="hidden" name="lead_inspector_name" value="{{ auth()->user()->name ?? '' }}">
-            <input type="hidden" name="lead_inspector_certification" value="{{ auth()->user()->certification ?? 'Inspector' }}">
-            
-            <div class="col-12">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Inspector:</strong> {{ auth()->user()->name ?? 'Current User' }} 
-                    @if(auth()->user()->certification)
-                        <br><strong>Qualification:</strong> {{ auth()->user()->certification }}
-                    @endif
-                </div>
-            </div>
-            @endif
         </div>
     </div>
 </section>

@@ -132,6 +132,47 @@
             width: 300px;
             margin-left: 10px;
         }
+        
+        .image-container {
+            page-break-inside: avoid;
+            margin-bottom: 30px;
+        }
+        
+        .image-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .image-caption {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+        
+        .image-meta {
+            font-size: 10px;
+            color: #999;
+            text-align: center;
+            margin-top: 5px;
+        }
+        
+        .inspection-image {
+            max-width: 100%;
+            max-height: 400px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: block;
+            margin: 0 auto;
+        }
+        
+        @media print {
+            .image-container {
+                break-inside: avoid;
+            }
+        }
     </style>
 </head>
 <body>
@@ -331,26 +372,98 @@
     <!-- Services and Results -->
     @if($inspection->services && $inspection->services->count() > 0)
     <div class="section-header">SERVICES PERFORMED</div>
-    <table class="equipment-table">
-        <thead>
+    
+    @foreach($inspection->services as $service)
+    @php
+        $serviceData = is_string($service->service_data) ? json_decode($service->service_data, true) : $service->service_data;
+        $serviceData = $serviceData ?: [];
+    @endphp
+    
+    <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+        <div style="background-color: #f0f0f0; padding: 5px; font-weight: bold; margin-bottom: 10px;">
+            {{ $service->service_type_name }} - Status: {{ ucfirst($service->status) }}
+        </div>
+        
+        <table class="details-table">
+            @if(isset($serviceData['service_name']))
             <tr>
-                <th>Service Type</th>
-                <th>Service Name</th>
-                <th>Status</th>
-                <th>Notes</th>
+                <td class="label">Service Name:</td>
+                <td>{{ $serviceData['service_name'] }}</td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach($inspection->services as $service)
+            @endif
+            
+            @if(isset($serviceData['service_description']))
             <tr>
-                <td>{{ $service->service_type ?? 'N/A' }}</td>
-                <td>{{ $service->service_name ?? 'N/A' }}</td>
-                <td>{{ ucfirst($service->status ?? 'planned') }}</td>
-                <td>{{ $service->notes ?? '-' }}</td>
+                <td class="label">Description:</td>
+                <td>{{ $serviceData['service_description'] }}</td>
             </tr>
-            @endforeach
-        </tbody>
-    </table>
+            @endif
+            
+            @if(isset($serviceData['test_parameters']))
+            <tr>
+                <td class="label">Test Parameters:</td>
+                <td>{{ $serviceData['test_parameters'] }}</td>
+            </tr>
+            @endif
+            
+            @if(isset($serviceData['acceptance_criteria']))
+            <tr>
+                <td class="label">Acceptance Criteria:</td>
+                <td>{{ $serviceData['acceptance_criteria'] }}</td>
+            </tr>
+            @endif
+            
+            @if(isset($serviceData['applicable_codes']))
+            <tr>
+                <td class="label">Applicable Codes:</td>
+                <td>{{ $serviceData['applicable_codes'] }}</td>
+            </tr>
+            @endif
+            
+            @if(isset($serviceData['estimated_duration']) || isset($serviceData['cost_estimate']))
+            <tr>
+                <td class="label">Duration & Cost:</td>
+                <td>
+                    @if(isset($serviceData['estimated_duration']))
+                        Duration: {{ $serviceData['estimated_duration'] }}
+                    @endif
+                    @if(isset($serviceData['cost_estimate']))
+                        @if(isset($serviceData['estimated_duration'])) | @endif
+                        Cost: ${{ number_format($serviceData['cost_estimate']) }}
+                    @endif
+                </td>
+            </tr>
+            @endif
+            
+            @if($service->notes)
+            <tr>
+                <td class="label">Service Notes:</td>
+                <td>{{ $service->notes }}</td>
+            </tr>
+            @endif
+            
+            {{-- Show results if any --}}
+            @if($service->results && $service->results->count() > 0)
+            <tr>
+                <td class="label">Results:</td>
+                <td>
+                    @foreach($service->results as $result)
+                        <div style="margin-bottom: 5px;">
+                            <strong>{{ $result->result_type }}:</strong> 
+                            @if($result->result_value)
+                                {{ $result->result_value }} {{ $result->unit }}
+                            @endif
+                            @if($result->notes)
+                                - {{ $result->notes }}
+                            @endif
+                        </div>
+                    @endforeach
+                </td>
+            </tr>
+            @endif
+        </table>
+    </div>
+    @endforeach
     @endif
     
     <div class="page-break"></div>
@@ -437,6 +550,64 @@
     <!-- Comments Section -->
     <div class="section-header">COMMENTS</div>
     <p>{{ $inspection->general_notes ?? 'No additional comments provided.' }}</p>
+    
+    <!-- Inspection Images Section -->
+    @php
+        $inspection_images = $inspection->inspection_images;
+        if (is_string($inspection_images)) {
+            $inspection_images = json_decode($inspection_images, true) ?: [];
+        }
+        $inspection_images = $inspection_images ?: [];
+    @endphp
+    @if(is_array($inspection_images) && count($inspection_images) > 0)
+    <div class="page-break"></div>
+    <div class="section-header">INSPECTION IMAGES</div>
+    
+    <div style="margin: 15px 0;">
+        @foreach($inspection_images as $index => $image)
+            @php
+                // Handle both complex image objects and simple file paths
+                if (is_string($image)) {
+                    // Simple file path
+                    $imageData = [
+                        'name' => basename($image),
+                        'caption' => '',
+                        'path' => $image
+                    ];
+                } else {
+                    // Complex image object
+                    $imageData = is_string($image) ? json_decode($image, true) : $image;
+                }
+            @endphp
+            @if($imageData && (isset($imageData['dataUrl']) || isset($imageData['path'])))
+                @php
+                    $imageName = $imageData['name'] ?? basename($image) ?? 'Inspection Image ' . ($index + 1);
+                    $imageCaption = $imageData['caption'] ?? '';
+                    $imagePath = isset($imageData['path']) ? public_path($imageData['path']) : null;
+                @endphp
+                <div class="image-container" style="margin-bottom: 20px; page-break-inside: avoid;">
+                    <div class="image-title" style="font-weight: bold; margin-bottom: 5px;">
+                        Image {{ $index + 1 }}: {{ $imageName }}
+                    </div>
+                    @if(!empty($imageCaption))
+                        <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                            {{ $imageCaption }}
+                        </div>
+                    @endif
+                    @if($imagePath && file_exists($imagePath))
+                        <div style="text-align: center; margin: 10px 0;">
+                            <img src="{{ $imagePath }}" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;" alt="{{ $imageName }}">
+                        </div>
+                    @elseif(isset($imageData['dataUrl']))
+                        <div style="text-align: center; margin: 10px 0;">
+                            <img src="{{ $imageData['dataUrl'] }}" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;" alt="{{ $imageName }}">
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @endforeach
+    </div>
+    @endif
     
     <!-- Declaration and Signatures -->
     <div class="section-header">DECLARATION AND SIGNATURES</div>

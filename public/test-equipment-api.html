@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Equipment API Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+    <h1>Equipment API Test</h1>
+    <button onclick="testEquipmentAPI()">Test Equipment API</button>
+    <div id="result"></div>
+
+    <script>
+    function testEquipmentAPI() {
+        $.ajax({
+            url: '/inspections/api/equipment',
+            type: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(data) {
+                console.log('API Response:', data);
+                $('#result').html('<h3>API Response:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>');
+                
+                // Test the data mapping
+                if (data && data.length > 0) {
+                    const equipment = data[0];
+                    const displayText = `${equipment.equipment_name} - ${equipment.brand_model || 'N/A'} (${equipment.serial_number || 'No S/N'})`;
+                    $('#result').append('<h3>Display Text:</h3><p>' + displayText + '</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('API Error:', error);
+                $('#result').html('<h3>Error:</h3><p>' + error + '</p><pre>' + xhr.responseText + '</pre>');
+            }
+        });
+    }
+    </script>
+</body>
+</html>
