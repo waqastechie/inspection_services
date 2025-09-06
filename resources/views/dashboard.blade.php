@@ -2,6 +2,23 @@
 
 @section('title', 'Dashboard - Inspection Services')
 
+@push('styles')
+<style>
+    .btn-outline-secondary:hover {
+        color: #6c757d !important;
+        background-color: #f8f9fa !important;
+        border-color: #6c757d !important;
+    }
+    
+    .btn-outline-secondary:focus,
+    .btn-outline-secondary:active {
+        color: #6c757d !important;
+        background-color: #e9ecef !important;
+        border-color: #6c757d !important;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container mt-4">
     <div class="row">
@@ -13,17 +30,6 @@
                         Dashboard
                     </h1>
                     <p class="text-muted">Welcome back, {{ Auth::user()->name }}!</p>
-                </div>
-                <div>
-                    <span class="badge bg-{{ Auth::user()->role_color }} fs-6 me-3">
-                        {{ Auth::user()->role_name }}
-                    </span>
-                    <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>

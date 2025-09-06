@@ -6,7 +6,7 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <h1 class="header-title">
-                        <i class="fas fa-cogs me-3"></i>
+                        <i class="fas fa-cogs me-2 fa-sm"></i>
                         Professional Inspection Services
                     </h1>
                     <p class="header-subtitle">

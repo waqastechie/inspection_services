@@ -37,6 +37,8 @@
 
     <!-- Custom Professional CSS -->
     <link rel="stylesheet" href="{{ asset('css/inspection-form.css') }}">
+    <!-- Enhanced Tablet & iPad Responsive Styles -->
+    <link rel="stylesheet" href="{{ asset('css/tablet-responsive.css') }}">
     <style>
         :root {
             --primary-color: #1e40af;

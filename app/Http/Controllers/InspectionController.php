@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB            // Service inspector validations
+            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
+            'load_test_inspector' => 'nullable|exists:personnels,id',
+            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
+            'mpi_service_inspector' => 'nullable|exists:personnels,id',
+            'visual_inspector' => 'nullable|exists:personnels,id', Illuminate\Support\Facades\Validator;
 use App\Models\Inspection;
 use App\Models\InspectionService;
 use App\Models\PersonnelAssignment;
@@ -106,11 +110,11 @@ class InspectionController extends Controller
             'personnel_responsibilities' => 'nullable|array',
             
             // Service Inspector Assignments
-            'lifting_examination_inspector' => 'nullable|exists:personnel,id',
-            'load_test_inspector' => 'nullable|exists:personnel,id',
-            'thorough_examination_inspector' => 'nullable|exists:personnel,id',
-            'mpi_service_inspector' => 'nullable|exists:personnel,id',
-            'visual_inspector' => 'nullable|exists:personnel,id',
+            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
+            'load_test_inspector' => 'nullable|exists:personnels,id',
+            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
+            'mpi_service_inspector' => 'nullable|exists:personnels,id',
+            'visual_inspector' => 'nullable|exists:personnels,id',
             
             // Comments
             'inspector_comments' => 'nullable|string',
@@ -475,11 +479,11 @@ class InspectionController extends Controller
             'lead_inspector_certification' => 'required|string|max:500',
             
             // Service Inspector Assignments
-            'lifting_examination_inspector' => 'nullable|exists:personnel,id',
-            'load_test_inspector' => 'nullable|exists:personnel,id',
-            'thorough_examination_inspector' => 'nullable|exists:personnel,id',
-            'mpi_service_inspector' => 'nullable|exists:personnel,id',
-            'visual_inspector' => 'nullable|exists:personnel,id',
+            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
+            'load_test_inspector' => 'nullable|exists:personnels,id',
+            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
+            'mpi_service_inspector' => 'nullable|exists:personnels,id',
+            'visual_inspector' => 'nullable|exists:personnels,id',
             
             // Additional Notes
             'general_notes' => 'nullable|string',

@@ -235,7 +235,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="{{ route('dashboard') }}">
-                <i class="fas fa-cogs me-2"></i>
+                <i class="fas fa-cogs me-1 fa-sm"></i>
                 Inspection Services
             </a>
             
@@ -331,15 +331,6 @@
                                 <a class="dropdown-item" href="#">
                                     <i class="fas fa-cog me-2"></i> Settings
                                 </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('logout') }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
-                                    </button>
-                                </form>
                             </li>
                         </ul>
                     </li>

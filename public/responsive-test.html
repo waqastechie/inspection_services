@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Test - Inspection Services</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/inspection-form.css">
+    <link rel="stylesheet" href="css/tablet-responsive.css">
+    <style>
+        .device-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .breakpoint-indicator {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        @media (max-width: 576px) {
+            .breakpoint-indicator { background: #fee2e2; color: #991b1b; }
+            .breakpoint-indicator::after { content: "📱 Mobile (≤576px)"; }
+        }
+        @media (min-width: 577px) and (max-width: 768px) {
+            .breakpoint-indicator { background: #fef3c7; color: #92400e; }
+            .breakpoint-indicator::after { content: "📱 Large Mobile (577px-768px)"; }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .breakpoint-indicator { background: #dbeafe; color: #1e40af; }
+            .breakpoint-indicator::after { content: "📱 Tablet (769px-1024px)"; }
+        }
+        @media (min-width: 1025px) {
+            .breakpoint-indicator { background: #dcfce7; color: #166534; }
+            .breakpoint-indicator::after { content: "🖥️ Desktop (≥1025px)"; }
+        }
+    </style>
+</head>
+<body>
+    <div class="device-info">
+        Screen: <span id="screenSize"></span><br>
+        Window: <span id="windowSize"></span><br>
+        Device: <span id="deviceType"></span><br>
+        Orientation: <span id="orientation"></span>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <h1 class="text-center my-4">📱 Responsive Design Test - Inspection Services</h1>
+                
+                <div class="breakpoint-indicator"></div>
+                
+                <!-- Test Navigation -->
+                <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);">
+                    <div class="container">
+                        <a class="navbar-brand" href="#">
+                            <i class="fas fa-cogs me-2"></i>Inspection Services
+                        </a>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTest">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarTest">
+                            <ul class="navbar-nav me-auto">
+                                <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
+                                <li class="nav-item"><a class="nav-link" href="#">Inspections</a></li>
+                                <li class="nav-item"><a class="nav-link" href="#">Reports</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Test Form Section -->
+                <div class="test-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-clipboard-check me-3"></i>Sample Form Section
+                    </h2>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Inspector Name</label>
+                            <select class="form-control">
+                                <option>Select Inspector</option>
+                                <option>John Smith - Senior Inspector</option>
+                                <option>Jane Doe - Lead Inspector</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Inspection Date</label>
+                            <input type="date" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Equipment Type</label>
+                            <div class="d-flex gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="equipment" id="crane">
+                                    <label class="form-check-label" for="crane">
+                                        <i class="fas fa-check-circle text-success me-2"></i>Crane
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="equipment" id="hoist">
+                                    <label class="form-check-label" for="hoist">
+                                        <i class="fas fa-check-circle text-success me-2"></i>Hoist
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Buttons -->
+                <div class="test-section">
+                    <h3>Button Testing</h3>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Report
+                        </button>
+                        <button class="btn btn-success">
+                            <i class="fas fa-check me-2"></i>Submit
+                        </button>
+                        <button class="btn btn-warning">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </button>
+                        <button class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Test Table -->
+                <div class="test-section">
+                    <h3>Table Testing</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>001</td>
+                                    <td>Main lifting hook assembly</td>
+                                    <td><span class="badge bg-success">Pass</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">View</button>
+                                        <button class="btn btn-sm btn-outline-warning">Edit</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>002</td>
+                                    <td>Load block and rigging</td>
+                                    <td><span class="badge bg-warning">Review</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">View</button>
+                                        <button class="btn btn-sm btn-outline-warning">Edit</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Test Modal Trigger -->
+                <div class="test-section">
+                    <h3>Modal Testing</h3>
+                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#testModal">
+                        <i class="fas fa-window-maximize me-2"></i>Open Test Modal
+                    </button>
+                </div>
+
+                <!-- Device-Specific Information -->
+                <div class="test-section">
+                    <h3>Device Information</h3>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5>Screen Resolution</h5>
+                                    <p id="resolution" class="fs-5 text-primary"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5>Device Pixel Ratio</h5>
+                                    <p id="pixelRatio" class="fs-5 text-success"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5>Touch Support</h5>
+                                    <p id="touchSupport" class="fs-5 text-info"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div class="modal fade" id="testModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Test Modal</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This modal tests how dialogs appear on different screen sizes.</p>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Test Input</label>
+                            <input type="text" class="form-control" placeholder="Type something here">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Test Select</label>
+                            <select class="form-control">
+                                <option>Option 1</option>
+                                <option>Option 2</option>
+                                <option>Option 3</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateDeviceInfo() {
+            document.getElementById('screenSize').textContent = `${screen.width}x${screen.height}`;
+            document.getElementById('windowSize').textContent = `${window.innerWidth}x${window.innerHeight}`;
+            document.getElementById('resolution').textContent = `${screen.width}x${screen.height}`;
+            document.getElementById('pixelRatio').textContent = window.devicePixelRatio || 1;
+            document.getElementById('touchSupport').textContent = ('ontouchstart' in window) ? 'Yes' : 'No';
+            
+            // Detect device type
+            let deviceType = 'Desktop';
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                if (/iPad/i.test(navigator.userAgent)) {
+                    deviceType = 'iPad';
+                } else if (/iPhone/i.test(navigator.userAgent)) {
+                    deviceType = 'iPhone';
+                } else if (/Android/i.test(navigator.userAgent)) {
+                    deviceType = window.innerWidth > 768 ? 'Android Tablet' : 'Android Phone';
+                } else {
+                    deviceType = 'Mobile';
+                }
+            }
+            document.getElementById('deviceType').textContent = deviceType;
+            
+            // Orientation
+            const orientation = window.innerHeight > window.innerWidth ? 'Portrait' : 'Landscape';
+            document.getElementById('orientation').textContent = orientation;
+        }
+
+        // Update on load and resize
+        updateDeviceInfo();
+        window.addEventListener('resize', updateDeviceInfo);
+        window.addEventListener('orientationchange', function() {
+            setTimeout(updateDeviceInfo, 100);
+        });
+    </script>
+</body>
+</html>
