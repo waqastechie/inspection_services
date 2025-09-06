@@ -5,6 +5,7 @@
 ### Quick Fix Options:
 
 ### Option 1: Use Laravel Command (Recommended)
+
 ```bash
 # In your production server, run:
 php artisan admin:create
@@ -15,12 +16,14 @@ php artisan admin:create
 ```
 
 ### Option 2: Run the PHP Script
+
 ```bash
 # In your project root directory:
 php create_admin_user.php
 ```
 
 ### Option 3: Use Production Setup Script
+
 ```bash
 # For Windows:
 production-setup.bat
@@ -31,6 +34,7 @@ chmod +x production-setup.sh
 ```
 
 ### Option 4: Manual Database Check
+
 ```sql
 -- Check if admin user exists
 SELECT * FROM users WHERE email = 'admin@inspectionservices.com';
@@ -45,16 +49,19 @@ php artisan db:seed --class=SuperAdminSeeder
 ## Common Production Issues:
 
 ### 1. Database Not Migrated
+
 ```bash
 php artisan migrate --force
 ```
 
 ### 2. Database Not Seeded
+
 ```bash
 php artisan db:seed --force
 ```
 
 ### 3. Cache Issues
+
 ```bash
 php artisan config:clear
 php artisan cache:clear
@@ -62,11 +69,13 @@ php artisan view:clear
 ```
 
 ### 4. Environment Issues
-- Check `.env` file has correct database settings
-- Verify `APP_ENV=production`
-- Ensure `APP_KEY` is set
+
+-   Check `.env` file has correct database settings
+-   Verify `APP_ENV=production`
+-   Ensure `APP_KEY` is set
 
 ### 5. Permissions Issues
+
 ```bash
 # Set proper permissions
 chmod -R 755 storage
@@ -84,12 +93,14 @@ After running any of the above solutions:
 ## Alternative Admin Emails to Try:
 
 If the above doesn't work, check if users exist with these emails:
-- `admin@company.com` (password: `password`)
-- `inspector@company.com` (password: `password`)
+
+-   `admin@company.com` (password: `password`)
+-   `inspector@company.com` (password: `password`)
 
 ## Need Custom Credentials?
 
 Run with custom options:
+
 ```bash
 php artisan admin:create --email=your@email.com --password=yourpassword --name="Your Name"
 ```
@@ -102,4 +113,5 @@ php artisan admin:create --email=your@email.com --password=yourpassword --name="
 4. Test with a simple user creation script
 
 ## Contact Support:
+
 If none of these solutions work, there might be a deeper configuration issue with your production environment.

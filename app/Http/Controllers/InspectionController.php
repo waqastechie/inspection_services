@@ -3,12 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB            // Service inspector validations
-            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
-            'load_test_inspector' => 'nullable|exists:personnels,id',
-            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
-            'mpi_service_inspector' => 'nullable|exists:personnels,id',
-            'visual_inspector' => 'nullable|exists:personnels,id', Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use App\Models\Inspection;
 use App\Models\InspectionService;
 use App\Models\PersonnelAssignment;

@@ -3,19 +3,22 @@
 ## 📦 Files Ready for Upload:
 
 ### Core Application:
-- [ ] All Laravel application files
-- [ ] `inspection_services_production_ready.sql` (269KB)
-- [ ] `PRODUCTION_IMPORT_GUIDE.md`
-- [ ] Production `.env` file
+
+-   [ ] All Laravel application files
+-   [ ] `inspection_services_production_ready.sql` (269KB)
+-   [ ] `PRODUCTION_IMPORT_GUIDE.md`
+-   [ ] Production `.env` file
 
 ### Production Setup Scripts:
-- [ ] `production-setup.bat` (Windows servers)
-- [ ] `production-setup.sh` (Linux servers)
-- [ ] `create_admin_user.php` (Emergency admin creation)
+
+-   [ ] `production-setup.bat` (Windows servers)
+-   [ ] `production-setup.sh` (Linux servers)
+-   [ ] `create_admin_user.php` (Emergency admin creation)
 
 ## 🗄️ Database Import:
 
 ### Quick Import Commands:
+
 ```bash
 # Create database
 mysql -u username -p -e "CREATE DATABASE your_db_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
@@ -70,16 +73,19 @@ chmod -R 755 public/images
 ## 🛠️ Emergency Commands:
 
 If login fails after import:
+
 ```bash
 php artisan admin:create
 ```
 
 If caching issues:
+
 ```bash
 php artisan optimize:clear
 ```
 
 If storage issues:
+
 ```bash
 php artisan storage:link
 chmod -R 755 public/storage
@@ -87,13 +93,13 @@ chmod -R 755 public/storage
 
 ## 📊 Database Contents After Import:
 
-- **Users**: 3 (Super Admin, Admin, Inspector)
-- **Clients**: Multiple test clients
-- **Personnel**: Sample inspectors
-- **Equipment**: Various equipment types
-- **Consumables**: Testing materials
-- **Inspections**: 1 complete sample inspection
-- **All necessary lookup data**
+-   **Users**: 3 (Super Admin, Admin, Inspector)
+-   **Clients**: Multiple test clients
+-   **Personnel**: Sample inspectors
+-   **Equipment**: Various equipment types
+-   **Consumables**: Testing materials
+-   **Inspections**: 1 complete sample inspection
+-   **All necessary lookup data**
 
 ## 🎯 Success Indicators:
 
@@ -108,6 +114,7 @@ chmod -R 755 public/storage
 Your application is ready for production! 🎉
 
 ## 📞 Support:
-- Check `storage/logs/laravel.log` for errors
-- Verify `.env` database settings
-- Ensure web server points to `public/` directory
+
+-   Check `storage/logs/laravel.log` for errors
+-   Verify `.env` database settings
+-   Ensure web server points to `public/` directory
