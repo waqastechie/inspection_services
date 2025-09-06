@@ -161,7 +161,9 @@ class InspectionController extends Controller
                     'applicable_standard', 'inspection_class', 'certification_body', 
                     'previous_certificate_number', 'last_inspection_date', 'next_inspection_due',
                     'inspector_comments', 'recommendations', 'defects_found', 'overall_result', 
-                    'next_inspection_date', 'limitations', 'inspector_signature', 'general_notes'
+                    'next_inspection_date', 'limitations', 'inspector_signature', 'general_notes',
+                    'lifting_examination_inspector', 'load_test_inspector', 'thorough_examination_inspector',
+                    'mpi_service_inspector', 'visual_inspector'
                 ];
                 
                 foreach ($safeOptionalFields as $field) {
