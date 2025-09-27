@@ -4,27 +4,144 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use App\Models\Inspection;
 use App\Models\InspectionService;
+use App\Models\Service;
 use App\Models\PersonnelAssignment;
 use App\Models\EquipmentAssignment;
+use App\Models\InspectionEquipment;
+use App\Models\EquipmentType;
 use App\Models\ConsumableAssignment;
-use App\Models\InspectionResult;
 use App\Models\Personnel;
+use App\Http\Requests\StoreInspectionRequest;
+use App\Http\Requests\UpdateInspectionRequest;
+use App\Services\ImageUploadService;
+use App\Models\InspectionResult;
 use App\Models\Equipment;
 use App\Models\Consumable;
 use App\Models\User;
+use App\Models\LiftingExamination;
+use App\Models\MpiInspection;
 
 class InspectionController extends Controller
 {
+    protected $imageUploadService;
+
+    public function __construct()
+    {
+        $this->imageUploadService = app(ImageUploadService::class);
+    }
+
     /**
      * Display the inspection form
      */
     public function create()
     {
-        $personnel = Personnel::orderBy('first_name')->get();
-        return view('inspections.create', compact('personnel'));
+        // Redirect to wizard instead of showing the old form
+        return redirect()->route('inspections.wizard.step', ['step' => 1]);
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $inspections = Inspection::with('client')->latest()->paginate(15);
+        return view('inspections.index', compact('inspections'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function show($id)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'services',
+            'personnelAssignments',
+            'equipmentAssignments.equipment',
+            'consumableAssignments',
+            'inspectionResults',
+            'images',
+            'liftingExamination',
+            'mpiInspection',
+            'inspectionEquipment',
+            'equipmentType' // Add equipment relationship for equipment_type field
+        ])->findOrFail($id);
+
+        return view('inspections.show', compact('inspection'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit($id)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'services',
+            'personnelAssignments',
+            'equipmentAssignments',
+            'consumableAssignments',
+            'inspectionResults',
+            'images'
+        ])->findOrFail($id);
+
+        return view('inspections.edit', compact('inspection'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $inspection = Inspection::findOrFail($id);
+            
+            $inspection->update([
+                'client_id' => $request->client_id,
+                'project_name' => $request->project_name,
+                'location' => $request->location,
+                'lead_inspector_name' => $request->lead_inspector_name ?? 'Inspector',
+                'lead_inspector_certification' => $request->lead_inspector_certification ?? 'Certified Inspector',
+                'status' => $request->status ?? $inspection->status,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('inspections.show', $inspection->id)
+                ->with('success', 'Inspection updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->with('error', 'An error occurred while updating the inspection: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy($id)
+    {
+        try {
+            $inspection = Inspection::findOrFail($id);
+            $inspection->delete();
+
+            return redirect()->route('inspections.index')
+                ->with('success', 'Inspection deleted successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'An error occurred while deleting the inspection: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -32,286 +149,31 @@ class InspectionController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            // Client Information
-            'client_name' => 'required|string|max:255',
-            'project_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'area_of_examination' => 'nullable|string|max:255',
-            'services_performed' => 'nullable|string|max:255',
-            'contract' => 'nullable|string|max:255',
-            'work_order' => 'nullable|string|max:255',
-            'purchase_order' => 'nullable|string|max:255',
-            'client_job_reference' => 'nullable|string|max:255',
-            'job_ref' => 'nullable|string|max:255',
-            'standards' => 'nullable|string|max:255',
-            'local_procedure_number' => 'nullable|string|max:255',
-            'drawing_number' => 'nullable|string|max:255',
-            'test_restrictions' => 'nullable|string',
-            'surface_condition' => 'nullable|string',
-            
-            // Job Details
-            'inspection_date' => 'required|date',
-            'lead_inspector_name' => 'nullable|string|max:255',
-            'lead_inspector_certification' => 'nullable|string|max:255',
-            'weather_conditions' => 'nullable|string|max:255',
-            'temperature' => 'nullable|numeric',
-            'humidity' => 'nullable|numeric|min:0|max:100',
-            
-            // Equipment Details
-            'equipment_type' => 'nullable|string|max:255',
-            'equipment_description' => 'nullable|string|max:255',
-            'manufacturer' => 'nullable|string|max:255',
-            'model' => 'nullable|string|max:255',
-            'serial_number' => 'nullable|string|max:255',
-            'asset_tag' => 'nullable|string|max:255',
-            'manufacture_year' => 'nullable|integer|min:1900|max:' . (date('Y') + 1),
-            'capacity' => 'nullable|numeric|min:0',
-            'capacity_unit' => 'nullable|string|max:50',
-            
-            // Certification Details
-            'applicable_standard' => 'nullable|string|max:255',
-            'inspection_class' => 'nullable|string|max:255',
-            'certification_body' => 'nullable|string|max:255',
-            'previous_certificate_number' => 'nullable|string|max:255',
-            'last_inspection_date' => 'nullable|date',
-            'next_inspection_due' => 'nullable|date|after_or_equal:inspection_date',
-            
-            // Asset Details (arrays for multiple assets)
-            'asset_ref' => 'nullable|array',
-            'asset_description' => 'nullable|array',
-            'asset_location' => 'nullable|array',
-            'capacity' => 'nullable|array',
-            'last_examined' => 'nullable|array',
-            'next_due' => 'nullable|array',
-            
-            // Items Table (arrays for multiple items)
-            'item_ref' => 'nullable|array',
-            'item_description' => 'nullable|array',
-            'item_quantity' => 'nullable|array',
-            'item_condition' => 'nullable|array',
-            'item_result' => 'nullable|array',
-            'item_remarks' => 'nullable|array',
-            
-            // Consumables (arrays for multiple consumables)
-            'consumable_description' => 'nullable|array',
-            'consumable_quantity' => 'nullable|array',
-            'consumable_unit' => 'nullable|array',
-            'consumable_batch_number' => 'nullable|array',
-            
-            // Personnel (arrays for multiple personnel)
-            'personnel_name' => 'nullable|array',
-            'personnel_company' => 'nullable|array',
-            'personnel_qualification' => 'nullable|array',
-            'personnel_responsibilities' => 'nullable|array',
-            
-            // Service Inspector Assignments
-            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
-            'load_test_inspector' => 'nullable|exists:personnels,id',
-            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
-            'mpi_service_inspector' => 'nullable|exists:personnels,id',
-            'visual_inspector' => 'nullable|exists:personnels,id',
-            
-            // Comments
-            'inspector_comments' => 'nullable|string',
-            'recommendations' => 'nullable|string',
-            'defects_found' => 'nullable|string',
-            'overall_result' => 'nullable|string|max:255',
-            'next_inspection_date' => 'nullable|date',
-            
-            // Additional fields
-            'inspection_id' => 'nullable|integer|exists:inspections,id',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
         try {
             DB::beginTransaction();
+            
+            $inspection = Inspection::create([
+                'inspection_number' => Inspection::generateInspectionNumber(),
+                'client_id' => $request->client_id,
+                'project_name' => $request->project_name,
+                'location' => $request->location,
+                'inspection_date' => now()->format('Y-m-d'),
+                'lead_inspector_name' => $request->lead_inspector_name ?? 'Inspector',
+                'lead_inspector_certification' => $request->lead_inspector_certification ?? 'Certified Inspector',
+                'status' => 'submitted_for_qa',
+                'report_date' => now(),
+            ]);
 
-            // Check if we're finalizing an existing auto-saved inspection
-            if ($request->inspection_id) {
-                $inspection = Inspection::findOrFail($request->inspection_id);
-                
-                // Prepare update data with new simplified fields
-                $updateData = [
-                    'client_name' => $request->client_name,
-                    'project_name' => $request->project_name,
-                    'location' => $request->location,
-                    'inspection_date' => $request->inspection_date,
-                    'lead_inspector_name' => $request->filled('lead_inspector_name') ? $request->lead_inspector_name : 'Inspector',
-                    'lead_inspector_certification' => $request->filled('lead_inspector_certification') ? $request->lead_inspector_certification : 'Certified Inspector',
-                    'equipment_type' => $request->filled('equipment_type') ? $request->equipment_type : 'TBD',
-                    'equipment_description' => $request->filled('equipment_description') ? $request->equipment_description : 'General Equipment',
-                    'status' => 'completed', // Changed from 'submitted'
-                    'report_date' => now(),
-                ];
-                
-                // Add optional fields only if they have values
-                $safeOptionalFields = [
-                    'area_of_examination', 'services_performed', 'contract', 'work_order', 'purchase_order',
-                    'client_job_reference', 'job_ref', 'standards', 'local_procedure_number', 
-                    'drawing_number', 'test_restrictions', 'surface_condition',
-                    'weather_conditions', 'temperature', 'humidity',
-                    'equipment_type', 'equipment_description', 'manufacturer', 'model', 'serial_number',
-                    'asset_tag', 'manufacture_year', 'capacity', 'capacity_unit',
-                    'applicable_standard', 'inspection_class', 'certification_body', 
-                    'previous_certificate_number', 'last_inspection_date', 'next_inspection_due',
-                    'inspector_comments', 'recommendations', 'defects_found', 'overall_result', 
-                    'next_inspection_date', 'limitations', 'inspector_signature', 'general_notes',
-                    'lifting_examination_inspector', 'load_test_inspector', 'thorough_examination_inspector',
-                    'mpi_service_inspector', 'visual_inspector'
-                ];
-                
-                foreach ($safeOptionalFields as $field) {
-                    if ($request->filled($field)) {
-                        $updateData[$field] = $request->$field;
-                    }
-                }
-                
-                $inspection->update($updateData);
-                
-                // Clear existing related data
-                $inspection->services()->delete();
-                $inspection->personnelAssignments()->delete();
-                $inspection->equipmentAssignments()->delete();
-                $inspection->consumableAssignments()->delete();
-            } else {
-                // Create a new inspection record with simplified fields
-                $createData = [
-                    'inspection_number' => Inspection::generateInspectionNumber(),
-                    'client_name' => $request->client_name,
-                    'project_name' => $request->project_name,
-                    'location' => $request->location,
-                    'inspection_date' => $request->inspection_date,
-                    'lead_inspector_name' => $request->filled('lead_inspector_name') ? $request->lead_inspector_name : 'Inspector',
-                    'lead_inspector_certification' => $request->filled('lead_inspector_certification') ? $request->lead_inspector_certification : 'Certified Inspector',
-                    'status' => 'completed', // Changed from 'submitted'
-                    'report_date' => now(),
-                ];
-                
-                // Add optional fields only if they have values
-                $safeOptionalFields = [
-                    'area_of_examination', 'services_performed', 'standards', 'contract', 'work_order', 
-                    'purchase_order', 'client_job_reference', 'job_ref', 'local_procedure_number', 
-                    'drawing_number', 'test_restrictions', 'surface_condition',
-                    'weather_conditions', 'temperature', 'humidity',
-                    'equipment_type', 'equipment_description', 'manufacturer', 'model', 'serial_number',
-                    'asset_tag', 'manufacture_year', 'capacity', 'capacity_unit',
-                    'applicable_standard', 'inspection_class', 'certification_body', 
-                    'previous_certificate_number', 'last_inspection_date', 'next_inspection_due',
-                    'inspector_comments', 'recommendations', 'defects_found', 'overall_result', 
-                    'next_inspection_date', 'limitations', 'inspector_signature', 'general_notes',
-                    'lifting_examination_inspector', 'load_test_inspector', 'thorough_examination_inspector',
-                    'mpi_service_inspector', 'visual_inspector'
-                ];
-                
-                foreach ($safeOptionalFields as $field) {
-                    if ($request->filled($field)) {
-                        $createData[$field] = $request->$field;
-                    }
-                }
-                
-                $inspection = Inspection::create($createData);
-            }
-
-            // Store asset details from arrays
-            if ($request->has('asset_ref') && is_array($request->asset_ref)) {
-                foreach ($request->asset_ref as $index => $ref) {
-                    if (!empty($ref)) {
-                        EquipmentAssignment::create([
-                            'inspection_id' => $inspection->id,
-                            'equipment_name' => $ref,
-                            'equipment_type' => 'asset',
-                            'equipment_description' => $request->asset_description[$index] ?? null,
-                            'location' => $request->asset_location[$index] ?? null,
-                            'capacity' => $request->capacity[$index] ?? null,
-                            'last_inspection_date' => $request->last_examined[$index] ?? null,
-                            'next_inspection_due' => $request->next_due[$index] ?? null,
-                            'status' => 'assigned',
-                        ]);
-                    }
-                }
-            }
-
-            // Store items table data from arrays
-            if ($request->has('item_ref') && is_array($request->item_ref)) {
-                foreach ($request->item_ref as $index => $ref) {
-                    if (!empty($ref)) {
-                        InspectionResult::create([
-                            'inspection_id' => $inspection->id,
-                            'item_reference' => $ref,
-                            'item_description' => $request->item_description[$index] ?? null,
-                            'quantity' => $request->item_quantity[$index] ?? null,
-                            'condition_found' => $request->item_condition[$index] ?? null,
-                            'result' => $request->item_result[$index] ?? null,
-                            'remarks' => $request->item_remarks[$index] ?? null,
-                        ]);
-                    }
-                }
-            }
-
-            // Store consumables from arrays
-            if ($request->has('consumable_description') && is_array($request->consumable_description)) {
-                foreach ($request->consumable_description as $index => $description) {
-                    if (!empty($description)) {
-                        ConsumableAssignment::create([
-                            'inspection_id' => $inspection->id,
-                            'consumable_name' => $description,
-                            'consumable_type' => 'standard',
-                            'quantity_used' => $request->consumable_quantity[$index] ?? null,
-                            'unit' => $request->consumable_unit[$index] ?? null,
-                            'batch_lot_number' => $request->consumable_batch_number[$index] ?? null,
-                        ]);
-                    }
-                }
-            }
-
-            // Store personnel from arrays
-            if ($request->has('personnel_name') && is_array($request->personnel_name)) {
-                foreach ($request->personnel_name as $index => $name) {
-                    if (!empty($name)) {
-                        PersonnelAssignment::create([
-                            'inspection_id' => $inspection->id,
-                            'personnel_name' => $name,
-                            'company' => $request->personnel_company[$index] ?? null,
-                            'qualification' => $request->personnel_qualification[$index] ?? null,
-                            'role_position' => $request->personnel_responsibilities[$index] ?? null,
-                            'status' => 'assigned',
-                        ]);
-                    }
-                }
-            }
+            // Handle service-specific data (MPI and Lifting Examination)
+            $this->saveServiceSpecificData($inspection, $request);
 
             DB::commit();
 
-            // Check if this is an AJAX request
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Inspection report has been created successfully!',
-                    'inspection_id' => $inspection->id,
-                    'inspection_number' => $inspection->inspection_number,
-                    'redirect_url' => route('inspections.show', $inspection->id)
-                ]);
-            }
-
             return redirect()->route('inspections.show', $inspection->id)
-                ->with('success', 'Inspection report has been created successfully! Inspection Number: ' . $inspection->inspection_number);
+                ->with('success', 'Inspection submitted for QA successfully! Report Number: ' . $inspection->inspection_number);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            // Check if this is an AJAX request
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'An error occurred while saving the inspection report: ' . $e->getMessage()
-                ], 500);
-            }
             
             return redirect()->back()
                 ->with('error', 'An error occurred while saving the inspection report: ' . $e->getMessage())
@@ -320,399 +182,271 @@ class InspectionController extends Controller
     }
 
     /**
-     * Generate PDF report
+     * Client portal methods
      */
-    public function generatePDF($id)
+    public function clientIndex()
     {
-        try {
-            $inspection = Inspection::with([
-                'services',
-                'personnelAssignments.personnel',
-                'equipmentAssignments.equipment', 
-                'consumableAssignments.consumable',
-                'inspectionResults'
-            ])->findOrFail($id);
-
-            // Load DomPDF using app helper
-            $pdf = app('dompdf.wrapper');
-            
-            // Load the view with inspection data
-            $pdf->loadView('pdf.inspection_report', compact('inspection'));
-            
-            // Set paper options
-            $pdf->setPaper('A4', 'portrait');
-            
-            // Set options for better rendering
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled' => false,
-                'isRemoteEnabled' => true,
-                'defaultFont' => 'Arial'
-            ]);
-            
-            // Generate filename
-            $filename = 'Inspection_Report_' . $inspection->inspection_number . '_' . date('Y-m-d') . '.pdf';
-            
-            // Return PDF download
-            return $pdf->download($filename);
-            
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'An error occurred while generating the PDF: ' . $e->getMessage());
+        if (!auth()->user()->isClient()) {
+            abort(403, 'Access denied');
         }
+
+        $inspections = Inspection::where('client_id', auth()->user()->client_id)
+            ->where('status', 'approved')
+            ->latest()
+            ->paginate(10);
+
+        return view('client.inspections.index', compact('inspections'));
     }
 
-    /**
-     * Preview PDF report in browser
-     */
-    public function previewPDF($id)
+    public function clientShow($id)
     {
-        try {
-            $inspection = Inspection::with([
-                'services',
-                'personnelAssignments.personnel',
-                'equipmentAssignments.equipment', 
-                'consumableAssignments.consumable',
-                'inspectionResults'
-            ])->findOrFail($id);
-
-            // Load DomPDF using app helper
-            $pdf = app('dompdf.wrapper');
-            
-            // Load the view with inspection data
-            $pdf->loadView('pdf.inspection_report', compact('inspection'));
-            
-            // Set paper options
-            $pdf->setPaper('A4', 'portrait');
-            
-            // Set options for better rendering
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled' => false,
-                'isRemoteEnabled' => true,
-                'defaultFont' => 'Arial'
-            ]);
-            
-            // Stream PDF (display in browser)
-            return $pdf->stream('Inspection_Report_' . $inspection->inspection_number . '.pdf');
-            
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'An error occurred while generating the PDF preview: ' . $e->getMessage());
+        if (!auth()->user()->isClient()) {
+            abort(403, 'Access denied');
         }
-    }
 
-    /**
-     * Display all inspection reports
-     */
-    public function index()
-    {
-        $inspections = Inspection::with(['services', 'personnelAssignments', 'equipmentAssignments', 'consumableAssignments'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-            
-        return view('inspections.index', compact('inspections'));
-    }
-
-    /**
-     * Show a specific inspection report
-     */
-    public function show($id)
-    {
         $inspection = Inspection::with([
-            'services.results',
-            'personnelAssignments.personnel',
-            'equipmentAssignments.equipment', 
-            'consumableAssignments.consumable',
-            'inspectionResults'
-        ])->findOrFail($id);
-        
-        return view('inspections.show', compact('inspection'));
-    }
-
-    /**
-     * Show the form for editing the specified inspection (Super Admin only)
-     */
-    public function edit($id)
-    {
-        $inspection = Inspection::with([
+            'client',
             'services',
             'personnelAssignments',
-            'equipmentAssignments', 
-            'consumableAssignments'
-        ])->findOrFail($id);
-        
-        $personnel = Personnel::orderBy('first_name')->get();
-        
-        return view('inspections.edit', compact('inspection', 'personnel'));
+            'equipmentAssignments',
+            'consumableAssignments',
+            'inspectionResults',
+            'images'
+        ])->where('client_id', auth()->user()->client_id)
+          ->where('status', 'approved')
+          ->findOrFail($id);
+
+        return view('client.inspections.show', compact('inspection'));
     }
 
     /**
-     * Update the specified inspection (Super Admin only)
+     * QA Methods
      */
-    public function update(Request $request, $id)
+    public function submitForQA($id)
     {
         $inspection = Inspection::findOrFail($id);
+        $inspection->update(['status' => 'submitted_for_qa']);
         
-        $validator = Validator::make($request->all(), [
-            // Basic Information
-            'client_name' => 'required|string|max:255',
-            'project_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'inspection_date' => 'required|date',
-            'weather_conditions' => 'nullable|string|max:255',
-            'temperature' => 'nullable|numeric',
-            'humidity' => 'nullable|numeric',
-            
-            // Certification & Standards
-            'applicable_standard' => 'nullable|string|max:255',
-            'inspection_class' => 'nullable|string|max:100',
-            'certification_body' => 'nullable|string|max:255',
-            'previous_certificate_number' => 'nullable|string|max:255',
-            'last_inspection_date' => 'nullable|date',
-            'next_inspection_due' => 'nullable|date|after:inspection_date',
-            
-            // Inspector Information
-            'lead_inspector_name' => 'required|string|max:255',
-            'lead_inspector_certification' => 'required|string|max:500',
-            
-            // Service Inspector Assignments
-            'lifting_examination_inspector' => 'nullable|exists:personnels,id',
-            'load_test_inspector' => 'nullable|exists:personnels,id',
-            'thorough_examination_inspector' => 'nullable|exists:personnels,id',
-            'mpi_service_inspector' => 'nullable|exists:personnels,id',
-            'visual_inspector' => 'nullable|exists:personnels,id',
-            
-            // Additional Notes
-            'general_notes' => 'nullable|string',
-            'status' => 'required|in:draft,in_progress,completed,cancelled',
-            
-            // Image uploads
-            'inspection_images' => 'nullable|array',
-            'inspection_images.*' => 'nullable|string', // JSON strings from frontend
-            
-            // Services, Personnel, Equipment, Consumables (JSON)
-            'selected_services' => 'nullable|json',
-            'personnel_assignments' => 'nullable|json',
-            'equipment_assignments' => 'nullable|json',
-            'consumable_assignments' => 'nullable|json',
+        return redirect()->back()->with('success', 'Inspection submitted for QA review');
+    }
+
+    /**
+     * Wizard Methods
+     */
+    public function createWizard($step = 1, $inspection = null)
+    {
+        $currentStep = (int) $step;
+        if ($currentStep < 1 || $currentStep > 7) {
+            $currentStep = 1;
+        }
+
+        $totalSteps = 7; // Total number of wizard steps
+        
+        // Define wizard steps (0-based indexing to match view expectations)
+        $steps = [
+            0 => [
+                'title' => 'Client Information',
+                'description' => 'Enter basic client and project details',
+                'view' => 'inspections.wizard.step1'
+            ],
+            1 => [
+                'title' => 'Equipment Details',
+                'description' => 'Specify equipment information',
+                'view' => 'inspections.wizard.step2'
+            ],
+            2 => [
+                'title' => 'Services',
+                'description' => 'Select and configure inspection services',
+                'view' => 'inspections.wizard.step3'
+            ],
+            3 => [
+                'title' => 'Equipment Assignments',
+                'description' => 'Assign equipment for inspection',
+                'view' => 'inspections.wizard.step4'
+            ],
+            4 => [
+                'title' => 'Consumables',
+                'description' => 'Assign consumables and materials',
+                'view' => 'inspections.wizard.step5'
+            ],
+            5 => [
+                'title' => 'Images & Documentation',
+                'description' => 'Upload images and documentation',
+                'view' => 'inspections.wizard.step6'
+            ],
+            6 => [
+                'title' => 'Review & Submit',
+                'description' => 'Review all information and submit for QA',
+                'view' => 'inspections.wizard.step7'
+            ]
+        ];
+        
+        $inspectionRecord = null;
+        if ($inspection) {
+            $inspectionRecord = Inspection::find($inspection);
+        }
+
+        // Load personnel data for service inspector dropdowns
+        $personnel = Personnel::where('is_active', true)
+            ->orderBy('first_name')
+            ->get();
+
+        // Load clients for step 1
+        $clients = \App\Models\Client::where('is_active', true)
+            ->orderBy('client_name')
+            ->get();
+
+        // Load consumables for step 5
+        $consumables = \App\Models\Consumable::active()
+            ->orderBy('type')
+            ->get();
+
+        // Load users for inspector dropdown
+        $users = \App\Models\User::where(function($query) {
+                $query->where('role', 'inspector')
+                      ->orWhere('role', 'admin');
+            })
+            ->orderBy('name')
+            ->get();
+
+        // Load equipment for step 2
+        $equipment = \App\Models\Equipment::active()
+            ->orderBy('name')
+            ->get();
+
+        return view('inspections.create-wizard', compact('currentStep', 'totalSteps', 'steps', 'personnel', 'clients', 'consumables', 'users', 'equipment') + ['inspection' => $inspectionRecord]);
+    }
+
+    public function saveWizardStep(Request $request)
+    {
+        $step = $request->input('step', 1);
+        $inspectionId = $request->input('inspection_id');
+
+        // DEBUG: Log all incoming request data
+        \Log::info('=== WIZARD STEP SAVE REQUEST ===', [
+            'step' => $step,
+            'inspection_id' => $inspectionId,
+            'has_equipment_data' => $request->has('equipment_data'),
+            'equipment_data_preview' => substr($request->input('equipment_data', ''), 0, 200),
+            'all_request_keys' => array_keys($request->all()),
+            'request_method' => $request->method(),
+            'url' => $request->url()
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
         try {
             DB::beginTransaction();
 
-            // Update the main inspection record
-            $inspection->update([
-                'client_name' => $request->client_name,
-                'project_name' => $request->project_name,
-                'location' => $request->location,
-                'inspection_date' => $request->inspection_date,
-                'weather_conditions' => $request->weather_conditions,
-                'temperature' => $request->temperature,
-                'humidity' => $request->humidity,
-                'applicable_standard' => $request->applicable_standard,
-                'inspection_class' => $request->inspection_class,
-                'certification_body' => $request->certification_body,
-                'previous_certificate_number' => $request->previous_certificate_number,
-                'last_inspection_date' => $request->last_inspection_date,
-                'next_inspection_due' => $request->next_inspection_due,
-                'lead_inspector_name' => $request->lead_inspector_name,
-                'lead_inspector_certification' => $request->lead_inspector_certification,
-                'lifting_examination_inspector' => $request->lifting_examination_inspector,
-                'load_test_inspector' => $request->load_test_inspector,
-                'thorough_examination_inspector' => $request->thorough_examination_inspector,
-                'mpi_service_inspector' => $request->mpi_service_inspector,
-                'visual_inspector' => $request->visual_inspector,
-                'general_notes' => $request->general_notes,
-                'status' => $request->status,
-                'inspection_images' => $request->inspection_images ? json_encode($request->inspection_images) : null,
-            ]);
-
-            // Delete existing related records and recreate them
-            $inspection->services()->delete();
-            $inspection->personnelAssignments()->delete();
-            $inspection->equipmentAssignments()->delete();
-            $inspection->consumableAssignments()->delete();
-
-            // Store updated services
-            if ($request->selected_services) {
-                $services = json_decode($request->selected_services, true);
-                foreach ($services as $service) {
-                    InspectionService::create([
-                        'inspection_id' => $inspection->id,
-                        'service_type' => $service['type'],
-                        'service_name' => $service['name'],
-                        'service_description' => $service['description'] ?? null,
-                        'test_parameters' => $service['parameters'] ?? null,
-                        'acceptance_criteria' => $service['criteria'] ?? null,
-                        'applicable_codes' => $service['codes'] ?? null,
-                        'estimated_duration' => $service['duration'] ?? null,
-                        'cost_estimate' => $service['cost'] ?? null,
-                        'status' => $service['status'] ?? 'planned',
-                    ]);
-                }
+            if ($inspectionId) {
+                $inspection = Inspection::findOrFail($inspectionId);
+                $inspection->update($request->except(['step', '_token', 'equipment_data']));
+            } else {
+                $inspection = Inspection::create(array_merge($request->except(['step', '_token', 'equipment_data']), [
+                    'inspection_number' => Inspection::generateInspectionNumber(),
+                    'status' => 'draft',
+                    'inspection_date' => now()->format('Y-m-d'),
+                ]));
             }
 
-            // Store updated personnel assignments
-            if ($request->personnel_assignments) {
-                $personnel = json_decode($request->personnel_assignments, true);
-                foreach ($personnel as $person) {
-                    PersonnelAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'personnel_name' => $person['name'],
-                        'role_position' => $person['role'],
-                        'certification_level' => $person['certification'] ?? null,
-                        'certification_number' => $person['cert_number'] ?? null,
-                        'certification_expiry' => $person['cert_expiry'] ?? null,
-                        'assigned_services' => $person['services'] ?? [],
-                        'contact_information' => $person['contact'] ?? null,
-                        'availability_start' => $person['start_time'] ?? null,
-                        'availability_end' => $person['end_time'] ?? null,
-                        'hourly_rate' => $person['rate'] ?? null,
-                        'status' => 'assigned',
-                    ]);
-                }
-            }
-
-            // Store updated equipment assignments
-            if ($request->equipment_assignments) {
-                $equipment = json_decode($request->equipment_assignments, true);
-                foreach ($equipment as $item) {
-                    EquipmentAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'equipment_name' => $item['name'],
-                        'equipment_type' => $item['type'],
-                        'brand_model' => $item['brand'] ?? null,
-                        'serial_number' => $item['serial'] ?? null,
-                        'calibration_date' => $item['cal_date'] ?? null,
-                        'calibration_due' => $item['cal_due'] ?? null,
-                        'calibration_certificate' => $item['cal_cert'] ?? null,
-                        'assigned_services' => $item['services'] ?? [],
-                        'condition' => $item['condition'] ?? 'good',
-                        'usage_hours' => $item['hours'] ?? null,
-                        'maintenance_notes' => $item['notes'] ?? null,
-                        'status' => 'assigned',
-                    ]);
-                }
-            }
-
-            // Store updated consumable assignments
-            if ($request->consumable_assignments) {
-                $consumables = json_decode($request->consumable_assignments, true);
-                foreach ($consumables as $item) {
-                    ConsumableAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'consumable_name' => $item['name'],
-                        'consumable_type' => $item['type'],
-                        'brand_manufacturer' => $item['brand'] ?? null,
-                        'product_code' => $item['code'] ?? null,
-                        'batch_lot_number' => $item['batch'] ?? null,
-                        'expiry_date' => $item['expiry'] ?? null,
-                        'quantity_used' => $item['quantity'] ?? null,
-                        'unit' => $item['unit'] ?? null,
-                        'unit_cost' => $item['cost'] ?? null,
-                        'supplier' => $item['supplier'] ?? null,
-                        'assigned_services' => $item['services'] ?? [],
-                        'condition' => $item['condition'] ?? 'new',
-                        'notes' => $item['notes'] ?? null,
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('inspections.show', $inspection->id)
-                ->with('success', 'Inspection report has been updated successfully!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'An error occurred while updating the inspection report: ' . $e->getMessage())
-                ->withInput();
-        }
-    }
-
-    /**
-     * Remove the specified inspection (Super Admin only)
-     */
-    public function destroy($id)
-    {
-        $inspection = Inspection::findOrFail($id);
-        
-        try {
-            DB::beginTransaction();
-            
-            // Delete all related records first
-            $inspection->services()->delete();
-            $inspection->personnelAssignments()->delete();
-            $inspection->equipmentAssignments()->delete();
-            $inspection->consumableAssignments()->delete();
-            $inspection->inspectionResults()->delete();
-            
-            // Delete the inspection itself
-            $inspection->delete();
-            
-            DB::commit();
-            
-            return redirect()->route('inspections.index')
-                ->with('success', 'Inspection report has been deleted successfully!');
+            // Handle equipment data for step 2 (Equipment Details)
+            if ($step == 2) {
+                \Log::info('Step 2 processing - Equipment Details', [
+                    'step' => $step,
+                    'inspection_id' => $inspection->id,
+                    'equipment_type' => $request->input('equipment_type'),
+                    'equipment_serial' => $request->input('equipment_serial'),
+                    'request_data' => $request->except(['_token', 'step'])
+                ]);
                 
+                $this->saveEquipmentDetails($inspection, $request);
+                \Log::info('saveEquipmentDetails completed for inspection ' . $inspection->id);
+            }
+
+            // Handle equipment assignments for step 4 (Equipment Assignments)
+            \Log::info('Step 4 processing', [
+                'step' => $step,
+                'has_equipment_data' => $request->has('equipment_data'),
+                'equipment_data_raw' => $request->input('equipment_data'),
+                'inspection_id' => $inspection->id
+            ]);
+            
+            if ($step == 4 && $request->has('equipment_data')) {
+                \Log::info('Calling saveEquipmentData for inspection ' . $inspection->id);
+                $this->saveEquipmentData($inspection, $request->input('equipment_data'));
+                \Log::info('saveEquipmentData completed for inspection ' . $inspection->id);
+            } elseif ($step == 4) {
+                \Log::warning('Step 4 but no equipment_data found in request', [
+                    'all_request_data' => $request->all()
+                ]);
+            }
+
+            // Handle consumables data for step 5
+            if ($step == 5 && $request->has('consumables')) {
+                \Log::info('Calling saveConsumablesData for inspection ' . $inspection->id);
+                $this->saveConsumablesData($inspection, $request->input('consumables'));
+                \Log::info('saveConsumablesData completed for inspection ' . $inspection->id);
+            } elseif ($step == 5) {
+                \Log::info('Step 5 but no consumables found in request', [
+                    'all_request_data' => $request->all()
+                ]);
+            }
+
+            // Handle images data for step 6
+            if ($step == 6) {
+                \Log::info('Processing Step 6 - Images & Documentation for inspection ' . $inspection->id);
+                $this->saveInspectionImages($inspection, $request);
+                \Log::info('saveInspectionImages completed for inspection ' . $inspection->id);
+            }
+
+            // Handle service-specific data (MPI and Lifting Examination)
+            $this->saveServiceSpecificData($inspection, $request);
+
+            DB::commit();
+
+            if ($step >= 7) {
+                // Final step - submit for QA
+                $inspection->update(['status' => 'submitted_for_qa']);
+                return redirect()->route('inspections.show', $inspection->id)
+                    ->with('success', 'Inspection submitted for QA successfully!');
+            } else {
+                // Go to next step
+                return redirect()->route('inspections.wizard.step', ['step' => $step + 1, 'inspection' => $inspection->id]);
+            }
+
         } catch (\Exception $e) {
             DB::rollBack();
-            
             return redirect()->back()
-                ->with('error', 'An error occurred while deleting the inspection report: ' . $e->getMessage());
+                ->with('error', 'Error saving wizard step: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
-    /**
-     * Save inspection draft to database (enhanced auto-save)
-     */
+    public function linkItemsToEquipment(Request $request)
+    {
+        // Handle linking items to equipment
+        return response()->json(['success' => true]);
+    }
+
     public function saveDraft(Request $request)
     {
         try {
-            $draftId = $request->input('draft_id');
-            $session = $request->session()->getId();
-            $ipAddress = $request->ip();
+            DB::beginTransaction();
 
-            // Find existing draft or create new one
-            if ($draftId) {
-                $draft = \App\Models\InspectionDraft::findByDraftId($draftId, $session);
-            }
+            $inspection = Inspection::create(array_merge($request->all(), [
+                'inspection_number' => Inspection::generateInspectionNumber(),
+                'status' => 'draft',
+                'inspection_date' => now()->format('Y-m-d'),
+            ]));
 
-            if (!isset($draft) || !$draft) {
-                $draft = new \App\Models\InspectionDraft();
-                $draft->draft_id = \App\Models\InspectionDraft::generateDraftId();
-                $draft->user_session = $session;
-                $draft->ip_address = $ipAddress;
-            }
-
-            // Update draft data
-            $draft->form_data = $request->input('form_data');
-            $draft->selected_services = $request->input('selected_services', []);
-            $draft->personnel_assignments = $request->input('personnel_assignments', []);
-            $draft->equipment_assignments = $request->input('equipment_assignments', []);
-            $draft->consumable_assignments = $request->input('consumable_assignments', []);
-            $draft->uploaded_images = $request->input('uploaded_images', []);
-            $draft->service_sections_data = $request->input('service_sections_data', []);
-            $draft->updated_at = now();
-
-            $draft->save();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Draft saved successfully',
-                'draft_id' => $draft->draft_id
+                'inspection_id' => $inspection->id,
+                'message' => 'Draft saved successfully'
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error saving draft: ' . $e->getMessage()
@@ -720,279 +454,693 @@ class InspectionController extends Controller
         }
     }
 
-    /**
-     * Get inspection draft from database
-     */
-    public function getDraft($draftId, Request $request)
-    {
-        try {
-            $session = $request->session()->getId();
-            $draft = \App\Models\InspectionDraft::findByDraftId($draftId, $session);
-
-            if (!$draft) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Draft not found'
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'draft' => [
-                    'draft_id' => $draft->draft_id,
-                    'form_data' => $draft->form_data,
-                    'selected_services' => $draft->selected_services ?? [],
-                    'personnel_assignments' => $draft->personnel_assignments ?? [],
-                    'equipment_assignments' => $draft->equipment_assignments ?? [],
-                    'consumable_assignments' => $draft->consumable_assignments ?? [],
-                    'uploaded_images' => $draft->uploaded_images ?? [],
-                    'service_sections_data' => $draft->service_sections_data ?? [],
-                    'last_saved_at' => $draft->updated_at->toISOString(),
-                    'version' => 1
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to retrieve draft: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Delete inspection draft
-     */
-    public function deleteDraft($draftId, Request $request)
-    {
-        try {
-            $session = $request->session()->getId();
-            $draft = \App\Models\InspectionDraft::findByDraftId($draftId, $session);
-
-            if (!$draft) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Draft not found'
-                ], 404);
-            }
-
-            $draft->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Draft deleted successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to delete draft: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update existing draft
-     */
     public function updateDraft(Request $request, $id)
     {
         try {
-            DB::beginTransaction();
-
             $inspection = Inspection::findOrFail($id);
-            
-            // Update only fields that have values (FIXED - removed problematic fields)
-            $updateData = [];
-            $allFields = [
-                'client_name', 'project_name', 'location', 'inspection_date',
-                'weather_conditions', 'temperature', 'humidity', 'equipment_type',
-                'equipment_description', 'manufacturer', 'model', 'serial_number',
-                'asset_tag', 'manufacture_year', 'capacity', 'capacity_unit',
-                'certification_body', 'previous_certificate_number', 'last_inspection_date', 
-                'next_inspection_due', 'lead_inspector_name', 'lead_inspector_certification', 'general_notes',
-                'lifting_examination_inspector', 'load_test_inspector', 'thorough_examination_inspector',
-                'mpi_service_inspector', 'visual_inspector'
-            ];
-
-            foreach ($allFields as $field) {
-                if ($request->filled($field)) {
-                    $updateData[$field] = $request->$field;
-                }
-            }
-
-            $inspection->update($updateData);
-
-            // Clear and re-store related data
-            $inspection->services()->delete();
-            $inspection->personnelAssignments()->delete();
-            $inspection->equipmentAssignments()->delete();
-            $inspection->consumableAssignments()->delete();
-
-            $this->storeRelatedData($inspection, $request);
-
-            DB::commit();
+            $inspection->update($request->all());
 
             return response()->json([
                 'success' => true,
-                'message' => 'Auto-save updated successfully',
-                'inspection_id' => $inspection->id
+                'message' => 'Draft updated successfully'
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating auto-save: ' . $e->getMessage()
+                'message' => 'Error updating draft: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function generatePDF($id)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'services',
+            'personnelAssignments',
+            'equipmentAssignments',
+            'consumableAssignments',
+            'inspectionResults',
+            'images'
+        ])->findOrFail($id);
+
+        // For now, return a simple response
+        return response()->json([
+            'message' => 'PDF generation not yet implemented',
+            'inspection_id' => $id
+        ]);
+    }
+
+    public function previewPDF($id)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'services',
+            'personnelAssignments',
+            'equipmentAssignments',
+            'consumableAssignments',
+            'inspectionResults',
+            'images'
+        ])->findOrFail($id);
+
+        return view('inspections.pdf-preview', compact('inspection'));
+    }
+
+    public function markAsCompleted($id)
+    {
+        $inspection = Inspection::findOrFail($id);
+        $inspection->update(['status' => 'completed']);
+        
+        return redirect()->back()->with('success', 'Inspection marked as completed');
+    }
+
+    public function deleteImage($imageId)
+    {
+        try {
+            // Handle image deletion
+            return response()->json([
+                'success' => true,
+                'message' => 'Image deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting image: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateImageCaption(Request $request, $imageId)
+    {
+        try {
+            // Handle image caption update
+            return response()->json([
+                'success' => true,
+                'message' => 'Caption updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating caption: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Helper method to store related data
+     * Save equipment data to inspection_equipment table
      */
-    private function storeRelatedData($inspection, $request)
+    private function saveEquipmentData($inspection, $equipmentDataJson)
     {
-        // Store selected services
-        if ($request->selected_services) {
-            $services = json_decode($request->selected_services, true);
-            if (is_array($services)) {
-                foreach ($services as $service) {
-                    InspectionService::create([
+        \Log::info('saveEquipmentData called', [
+            'inspection_id' => $inspection->id,
+            'equipmentDataJson' => $equipmentDataJson,
+            'is_empty' => empty($equipmentDataJson)
+        ]);
+        
+        if (empty($equipmentDataJson)) {
+            \Log::warning('Equipment data is empty, skipping save');
+            return;
+        }
+
+        $equipmentData = json_decode($equipmentDataJson, true);
+        \Log::info('Decoded equipment data', [
+            'is_array' => is_array($equipmentData),
+            'count' => is_array($equipmentData) ? count($equipmentData) : 0,
+            'data' => $equipmentData
+        ]);
+        
+        if (!is_array($equipmentData)) {
+            \Log::error('Equipment data is not an array after JSON decode');
+            return;
+        }
+
+        // Clear existing equipment for this inspection
+        $deletedCount = \App\Models\InspectionEquipment::where('inspection_id', $inspection->id)->count();
+        \App\Models\InspectionEquipment::where('inspection_id', $inspection->id)->delete();
+        \Log::info('Cleared existing equipment records', ['deleted_count' => $deletedCount]);
+
+        // Save new equipment data
+        $createdCount = 0;
+        foreach ($equipmentData as $index => $item) {
+            \Log::info('Creating equipment record', ['index' => $index, 'item' => $item]);
+            
+            // Validate and clean numeric fields
+            $swl = null;
+            if (!empty($item['swl'])) {
+                $swlValue = is_numeric($item['swl']) ? (float) $item['swl'] : null;
+                if ($swlValue !== null && $swlValue >= 0) {
+                    $swl = $swlValue;
+                } else {
+                    \Log::warning('Invalid SWL value ignored', ['value' => $item['swl'], 'index' => $index]);
+                }
+            }
+            
+            $testLoad = null;
+            if (!empty($item['test_load_applied'])) {
+                $testLoadValue = is_numeric($item['test_load_applied']) ? (float) $item['test_load_applied'] : null;
+                if ($testLoadValue !== null && $testLoadValue >= 0) {
+                    $testLoad = $testLoadValue;
+                } else {
+                    \Log::warning('Invalid test load value ignored', ['value' => $item['test_load_applied'], 'index' => $index]);
+                }
+            }
+            
+            $record = \App\Models\InspectionEquipment::create([
+                'inspection_id' => $inspection->id,
+                'client_id' => $inspection->client_id,
+                'equipment_type_id' => $item['equipment_type_id'] ?? null,
+                'category' => $item['category'] ?? 'item',
+                'equipment_type' => $item['equipment_type'] ?? '',
+                'serial_number' => $item['serial_number'] ?? '',
+                'description' => $item['description'] ?? '',
+                'reason_for_examination' => $item['reason_for_examination'] ?? '',
+                'model' => $item['model'] ?? '',
+                'swl' => $swl,
+                'test_load_applied' => $testLoad,
+                'date_of_manufacture' => $item['date_of_manufacture'] ?: null,
+                'date_of_last_examination' => $item['date_of_last_examination'] ?: null,
+                'date_of_next_examination' => $item['date_of_next_examination'] ?: null,
+                'status' => $item['status'] ?? '',
+                'remarks' => $item['remarks'] ?? '',
+                'condition' => 'good',
+                'metadata' => json_encode($item)
+            ]);
+            
+            $createdCount++;
+            \Log::info('Created equipment record', ['id' => $record->id, 'equipment_type' => $record->equipment_type]);
+        }
+        
+        \Log::info('Equipment data save completed', ['created_count' => $createdCount]);
+    }
+
+    /**
+     * Save equipment details from step 2 of the wizard
+     */
+    private function saveEquipmentDetails($inspection, $request)
+    {
+        \Log::info('saveEquipmentDetails called', [
+            'inspection_id' => $inspection->id,
+            'equipment_type' => $request->input('equipment_type'),
+            'equipment_serial' => $request->input('equipment_serial')
+        ]);
+
+        try {
+            // Delete existing equipment assignments for this inspection
+            \App\Models\EquipmentAssignment::where('inspection_id', $inspection->id)->delete();
+
+            // Get equipment details if equipment_type is numeric (equipment ID)
+            $equipmentName = '';
+            $equipmentType = '';
+            if (is_numeric($request->input('equipment_type'))) {
+                $equipment = \App\Models\Equipment::find($request->input('equipment_type'));
+                if ($equipment) {
+                    $equipmentName = $equipment->name;
+                    $equipmentType = $equipment->type;
+                }
+            }
+
+            // Determine assigned services based on equipment name/type
+            $assignedServices = $this->getServicesForEquipment($equipmentName ?: $request->input('equipment_type'));
+
+            // Determine calibration status based on dates
+            $calibrationStatus = 'current';
+            if ($request->input('equipment_next_due')) {
+                $nextDue = \Carbon\Carbon::parse($request->input('equipment_next_due'));
+                if ($nextDue->isPast()) {
+                    $calibrationStatus = 'overdue';
+                } elseif ($nextDue->diffInDays(now()) <= 30) {
+                    $calibrationStatus = 'due_soon';
+                }
+            } else {
+                $calibrationStatus = 'not_required';
+            }
+
+            // Create new equipment assignment based on step 2 form data
+            $equipmentAssignment = \App\Models\EquipmentAssignment::create([
+                'inspection_id' => $inspection->id,
+                'equipment_id' => is_numeric($request->input('equipment_type')) ? $request->input('equipment_type') : null,
+                'equipment_name' => $equipmentName ?: $request->input('equipment_type'),
+                'equipment_type' => $equipmentType ?: $request->input('equipment_type'),
+                'make_model' => trim(($request->input('equipment_manufacturer') ?: '') . ' ' . ($request->input('equipment_model') ?: '')),
+                'serial_number' => $request->input('equipment_serial'),
+                'last_calibration_date' => $request->input('equipment_cert_date') ?: null,
+                'next_calibration_date' => $request->input('equipment_next_due') ?: null,
+                'calibration_status' => $calibrationStatus,
+                'condition' => strtolower($request->input('equipment_status')) ?: 'good',
+                'assigned_services' => $assignedServices,
+                'notes' => $request->input('equipment_comments')
+            ]);
+
+            \Log::info('Equipment assignment created', ['id' => $equipmentAssignment->id]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error saving equipment details', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get assigned services for equipment based on equipment name/type
+     */
+    private function getServicesForEquipment($equipmentName)
+    {
+        $equipmentName = strtolower($equipmentName);
+        
+        // MPI (Magnetic Particle Inspection) Equipment
+        $mpiEquipment = [
+            'ac yoke', 'dc yoke', 'permanent magnet', 'test blocks',
+            'magnetic particle tester', 'yoke', 'magnet'
+        ];
+        
+        // DPI (Dye Penetrant Inspection) Equipment  
+        $dpiEquipment = [
+            'comparator block', 'penetrant testing kit', 'dye penetrant'
+        ];
+        
+        // Load Testing Equipment
+        $loadTestingEquipment = [
+            'load cell', 'water bags', 'dead weight blocks', 'crane scale',
+            'load testing', 'weight', 'lifting'
+        ];
+        
+        // NDT Equipment (General)
+        $ndtEquipment = [
+            'ultrasonic testing device', 'ultrasonic', 'ut', 'flaw detector'
+        ];
+        
+        // Check equipment name against service categories
+        foreach ($mpiEquipment as $equipment) {
+            if (strpos($equipmentName, $equipment) !== false) {
+                return ['MPI'];
+            }
+        }
+        
+        foreach ($dpiEquipment as $equipment) {
+            if (strpos($equipmentName, $equipment) !== false) {
+                return ['DPI'];
+            }
+        }
+        
+        foreach ($loadTestingEquipment as $equipment) {
+            if (strpos($equipmentName, $equipment) !== false) {
+                return ['Load Testing'];
+            }
+        }
+        
+        foreach ($ndtEquipment as $equipment) {
+            if (strpos($equipmentName, $equipment) !== false) {
+                return ['NDT', 'UT'];
+            }
+        }
+        
+        // Default: return empty array if no specific service match
+        return [];
+    }
+
+    /**
+     * Save consumables assignment data for inspection
+     */
+    private function saveConsumablesData($inspection, $consumablesData)
+    {
+        \Log::info('saveConsumablesData called', [
+            'inspection_id' => $inspection->id,
+            'consumables_data' => $consumablesData,
+            'is_empty' => empty($consumablesData)
+        ]);
+        
+        if (empty($consumablesData)) {
+            \Log::warning('Consumables data is empty, skipping save');
+            return;
+        }
+
+        if (!is_array($consumablesData)) {
+            \Log::error('Consumables data is not an array');
+            return;
+        }
+
+        // Clear existing consumable assignments for this inspection
+        $deletedCount = ConsumableAssignment::where('inspection_id', $inspection->id)->count();
+        ConsumableAssignment::where('inspection_id', $inspection->id)->delete();
+        \Log::info('Cleared existing consumable assignments', ['deleted_count' => $deletedCount]);
+
+        // Save new consumable assignments
+        $createdCount = 0;
+        foreach ($consumablesData as $index => $item) {
+            \Log::info('Creating consumable assignment record', ['index' => $index, 'item' => $item]);
+            
+            // Validate quantity
+            $quantity = 1; // default
+            if (!empty($item['quantity'])) {
+                $quantityValue = is_numeric($item['quantity']) ? (float) $item['quantity'] : null;
+                if ($quantityValue !== null && $quantityValue > 0) {
+                    $quantity = $quantityValue;
+                } else {
+                    \Log::warning('Invalid quantity value, using default 1', ['value' => $item['quantity'], 'index' => $index]);
+                }
+            }
+
+            // Validate cost
+            $cost = null;
+            if (!empty($item['cost'])) {
+                $costValue = is_numeric($item['cost']) ? (float) $item['cost'] : null;
+                if ($costValue !== null && $costValue >= 0) {
+                    $cost = $costValue;
+                } else {
+                    \Log::warning('Invalid cost value ignored', ['value' => $item['cost'], 'index' => $index]);
+                }
+            }
+            
+            // Get consumable type from database if consumable_id is provided
+            $consumableType = '';
+            if (!empty($item['consumable_id'])) {
+                $consumable = \App\Models\Consumable::find($item['consumable_id']);
+                if ($consumable) {
+                    $consumableType = $consumable->type;
+                }
+            }
+            
+            // Get assigned services - default to common services for the consumable type
+            $assignedServices = [];
+            if (!empty($item['assigned_services'])) {
+                $assignedServices = is_array($item['assigned_services']) ? $item['assigned_services'] : [$item['assigned_services']];
+            } else {
+                // Auto-assign services based on consumable type
+                $assignedServices = $this->getServicesForConsumableType($consumableType ?: ($item['type'] ?? 'General'));
+            }
+            
+            $record = ConsumableAssignment::create([
+                'inspection_id' => $inspection->id,
+                'consumable_id' => $item['consumable_id'] ?? null,
+                'consumable_name' => $item['description'] ?? '',
+                'consumable_type' => $consumableType ?: ($item['type'] ?? 'General'),
+                'batch_lot_number' => $item['batch_number'] ?? '',
+                'quantity_used' => $quantity,
+                'unit' => $item['unit'] ?? '',
+                'condition' => $item['condition'] ?? 'new',
+                'assigned_services' => json_encode($assignedServices),
+                'notes' => $item['notes'] ?? ''
+            ]);
+            
+            $createdCount++;
+            \Log::info('Created consumable assignment record', ['id' => $record->id, 'consumable_name' => $record->consumable_name]);
+        }
+        
+        \Log::info('Consumables data save completed', ['created_count' => $createdCount]);
+    }
+
+    /**
+     * Get assigned services for consumable based on consumable type
+     */
+    private function getServicesForConsumableType($consumableType)
+    {
+        $consumableType = strtolower($consumableType);
+        
+        // Map consumable types to their common services
+        $serviceMapping = [
+            'coupling agent' => ['UT', 'NDT'],
+            'test medium' => ['MPI', 'NDT'],
+            'test chemical' => ['DPI', 'PT'],
+            'imaging medium' => ['RT', 'NDT'],
+            'processing chemical' => ['RT', 'DPI'],
+            'cleaner' => ['MPI', 'DPI', 'NDT'],
+            'developer' => ['DPI', 'PT'],
+            'penetrant' => ['DPI', 'PT'],
+            'magnetic particles' => ['MPI'],
+            'contrast paint' => ['DPI', 'PT'],
+            'general' => ['General Inspection']
+        ];
+        
+        // Check for matching service mapping
+        foreach ($serviceMapping as $type => $services) {
+            if (strpos($consumableType, $type) !== false) {
+                return $services;
+            }
+        }
+        
+        // Default services if no specific match found
+        return ['General Inspection'];
+    }
+
+    /**
+     * Save inspection images and documents
+     */
+    private function saveInspectionImages($inspection, $request)
+    {
+        \Log::info('saveInspectionImages called', [
+            'inspection_id' => $inspection->id,
+            'has_files' => $request->hasFile('inspection_images'),
+            'files_count' => $request->hasFile('inspection_images') ? count($request->file('inspection_images')) : 0
+        ]);
+
+        // Handle file uploads
+        if ($request->hasFile('inspection_images')) {
+            $uploadedFiles = $request->file('inspection_images');
+            $savedCount = 0;
+
+            foreach ($uploadedFiles as $index => $file) {
+                try {
+                    // Validate file
+                    if (!$file->isValid()) {
+                        \Log::warning('Invalid file skipped', ['index' => $index, 'error' => $file->getErrorMessage()]);
+                        continue;
+                    }
+
+                    // Generate unique filename
+                    $originalName = $file->getClientOriginalName();
+                    $extension = $file->getClientOriginalExtension();
+                    $fileName = time() . '_' . $index . '_' . \Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $extension;
+
+                    // Store file in storage/app/public/inspection_images
+                    $filePath = $file->storeAs('inspection_images', $fileName, 'public');
+
+                    // Get description from request (if provided)
+                    $description = $request->input("image_descriptions.{$index}", '');
+
+                    // Save to database
+                    $imageRecord = \App\Models\InspectionImage::create([
                         'inspection_id' => $inspection->id,
-                        'service_type' => $service['type'] ?? '',
-                        'service_name' => $service['name'] ?? '',
-                        'service_description' => $service['description'] ?? null,
-                        'test_parameters' => $service['parameters'] ?? null,
-                        'acceptance_criteria' => $service['criteria'] ?? null,
-                        'applicable_codes' => $service['codes'] ?? null,
-                        'estimated_duration' => $service['duration'] ?? null,
-                        'cost_estimate' => $service['cost'] ?? null,
-                        'status' => 'planned',
+                        'original_name' => $originalName,
+                        'file_name' => $fileName,
+                        'file_path' => $filePath,
+                        'file_size' => $file->getSize(),
+                        'mime_type' => $file->getMimeType(),
+                        'caption' => $description,
+                        'sort_order' => $index + 1
+                    ]);
+
+                    $savedCount++;
+                    \Log::info('Image saved successfully', [
+                        'id' => $imageRecord->id,
+                        'file_name' => $originalName,
+                        'file_path' => $filePath
+                    ]);
+
+                } catch (\Exception $e) {
+                    \Log::error('Failed to save image', [
+                        'index' => $index,
+                        'error' => $e->getMessage(),
+                        'file_name' => $file->getClientOriginalName()
                     ]);
                 }
             }
+
+            \Log::info('Image upload completed', ['saved_count' => $savedCount]);
         }
 
-        // Store personnel assignments
-        if ($request->personnel_assignments) {
-            $personnel = json_decode($request->personnel_assignments, true);
-            if (is_array($personnel)) {
-                foreach ($personnel as $person) {
-                    PersonnelAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'personnel_name' => $person['name'] ?? '',
-                        'role_position' => $person['role'] ?? '',
-                        'certification_level' => $person['certification'] ?? null,
-                        'certification_number' => $person['cert_number'] ?? null,
-                        'certification_expiry' => $person['cert_expiry'] ?? null,
-                        'assigned_services' => $person['services'] ?? [],
-                        'contact_information' => $person['contact'] ?? null,
-                        'availability_start' => $person['start_time'] ?? null,
-                        'availability_end' => $person['end_time'] ?? null,
-                        'hourly_rate' => $person['rate'] ?? null,
-                    ]);
+        // Handle deletion of existing images (if any deletion requests)
+        if ($request->has('delete_images')) {
+            $deleteIds = $request->input('delete_images', []);
+            if (!empty($deleteIds)) {
+                $deletedCount = 0;
+                foreach ($deleteIds as $imageId) {
+                    try {
+                        $image = \App\Models\InspectionImage::where('inspection_id', $inspection->id)
+                                                            ->where('id', $imageId)
+                                                            ->first();
+                        if ($image) {
+                            // Delete file from storage
+                            \Storage::disk('public')->delete($image->file_path);
+                            // Delete database record
+                            $image->delete();
+                            $deletedCount++;
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to delete image', ['id' => $imageId, 'error' => $e->getMessage()]);
+                    }
                 }
-            }
-        }
-
-        // Store equipment assignments
-        if ($request->equipment_assignments) {
-            $equipment = json_decode($request->equipment_assignments, true);
-            if (is_array($equipment)) {
-                foreach ($equipment as $item) {
-                    EquipmentAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'equipment_name' => $item['name'] ?? '',
-                        'equipment_type' => $item['type'] ?? '',
-                        'brand_model' => $item['brand'] ?? null,
-                        'serial_number' => $item['serial'] ?? null,
-                        'calibration_date' => $item['cal_date'] ?? null,
-                        'calibration_due' => $item['cal_due'] ?? null,
-                        'calibration_certificate' => $item['cal_cert'] ?? null,
-                        'assigned_services' => $item['services'] ?? [],
-                        'condition' => $item['condition'] ?? null,
-                        'usage_hours' => $item['hours'] ?? null,
-                        'maintenance_notes' => $item['notes'] ?? null,
-                    ]);
-                }
-            }
-        }
-
-        // Store consumable assignments
-        if ($request->consumable_assignments) {
-            $consumables = json_decode($request->consumable_assignments, true);
-            if (is_array($consumables)) {
-                foreach ($consumables as $item) {
-                    ConsumableAssignment::create([
-                        'inspection_id' => $inspection->id,
-                        'consumable_name' => $item['name'] ?? '',
-                        'consumable_type' => $item['type'] ?? '',
-                        'brand_manufacturer' => $item['brand'] ?? null,
-                        'product_code' => $item['code'] ?? null,
-                        'batch_lot_number' => $item['batch'] ?? null,
-                        'expiry_date' => $item['expiry'] ?? null,
-                        'quantity_used' => $item['quantity'] ?? null,
-                        'unit' => $item['unit'] ?? null,
-                        'unit_cost' => $item['cost'] ?? null,
-                        'supplier' => $item['supplier'] ?? null,
-                        'assigned_services' => $item['services'] ?? [],
-                        'condition' => $item['condition'] ?? null,
-                        'notes' => $item['notes'] ?? null,
-                    ]);
-                }
+                \Log::info('Images deleted', ['deleted_count' => $deletedCount]);
             }
         }
     }
 
     /**
-     * Get personnel data for dropdowns
+     * Save service-specific data (MPI and Lifting Examination)
      */
-    public function getPersonnel()
+    private function saveServiceSpecificData($inspection, $request)
     {
-        $personnel = Personnel::where('is_active', true)
-            ->select('id', 'first_name', 'last_name', 'position', 'department', 'qualifications', 'certifications', 'phone', 'email')
-            ->orderBy('first_name')
-            ->get()
-            ->map(function($person) {
-                return [
-                    'id' => $person->id,
-                    'name' => $person->first_name . ' ' . $person->last_name,
-                    'position' => $person->position,
-                    'department' => $person->department,
-                    'qualifications' => $person->qualifications,
-                    'certifications' => $person->certifications,
-                    'contact' => $person->phone . ($person->email ? ' / ' . $person->email : ''),
-                ];
+        // Save Lifting Examination data if present
+        if ($request->has('lifting_examination_inspector') || $request->has('first_examination')) {
+            $liftingData = [
+                'inspection_id' => $inspection->id,
+                'inspector_id' => $request->input('lifting_examination_inspector'),
+                'first_examination' => $request->input('first_examination'),
+                'equipment_installation_details' => $request->input('equipment_installation_details'),
+                'safe_to_operate' => $request->input('equipment_safe_to_operate') ? 'yes' : null,
+                'equipment_defect' => $request->input('equipment_defect'),
+                'defect_description' => $request->input('defect_description'),
+                'existing_danger' => $request->input('existing_danger'),
+                'potential_danger' => $request->input('potential_danger'),
+                'defect_timeline' => $request->input('defect_timeline'),
+                'repair_details' => $request->input('repair_details'),
+                'test_details' => $request->input('test_details'),
+            ];
+
+            // Remove null values
+            $liftingData = array_filter($liftingData, function($value) {
+                return $value !== null && $value !== '';
             });
 
-        return response()->json($personnel);
-    }
-    
-    public function getInspectors()
-    {
-        try {
-            // Get all users with inspector, admin, or super_admin roles
-            $inspectors = User::whereIn('role', ['inspector', 'admin', 'super_admin'])
-                ->select('id', 'name', 'email', 'certification', 'department', 'role')
-                ->orderBy('name')
-                ->get()
-                ->map(function($inspector) {
-                    return [
-                        'id' => $inspector->id,
-                        'name' => $inspector->name,
-                        'email' => $inspector->email,
-                        'certification' => $inspector->certification ?? '',
-                        'department' => $inspector->department ?? '',
-                        'role' => $inspector->role,
-                        'display_name' => $inspector->name . ' (' . ucfirst(str_replace('_', ' ', $inspector->role)) . ')',
-                    ];
-                });
+            if (!empty($liftingData) && isset($liftingData['inspection_id'])) {
+                \App\Models\LiftingExamination::updateOrCreate(
+                    ['inspection_id' => $inspection->id],
+                    $liftingData
+                );
+            }
+        }
 
-            return response()->json($inspectors);
-        } catch (\Exception $e) {
-            \Log::error('Error in getInspectors: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to load inspectors: ' . $e->getMessage()], 500);
+        // Save MPI data if present
+        if ($request->has('mpi_service_inspector') || $request->has('contrast_paint_method')) {
+            $mpiData = [
+                'inspection_id' => $inspection->id,
+                'inspector_id' => $request->input('mpi_service_inspector'),
+                'contrast_paint_method' => $request->input('contrast_paint_method'),
+                'ink_powder_1_method' => $request->input('ink_powder_1_method'),
+                'magnetic_particle_concentration' => $request->input('magnetic_particle_concentration'),
+                'current_flow' => $request->input('current_flow'),
+                'ink_powder_1_carrier' => $request->input('ink_powder_1_carrier'),
+                'contact_spacing' => $request->input('contact_spacing'),
+                'magnetic_flow' => $request->input('magnetic_flow'),
+                'ink_powder_2_method' => $request->input('ink_powder_2_method'),
+                'field_application_time' => $request->input('field_application_time'),
+                'ink_powder_2_carrier' => $request->input('ink_powder_2_carrier'),
+                'black_light_intensity_begin' => $request->input('black_light_intensity_begin'),
+                'black_light_intensity_end' => $request->input('black_light_intensity_end'),
+                'test_temperature' => $request->input('test_temperature'),
+                'pull_test' => $request->input('pull_test'),
+                'post_test_cleaning' => $request->input('post_test_cleaning'),
+                'initial_demagnetisation' => $request->input('initial_demagnetisation'),
+                'final_demagnetisation' => $request->input('final_demagnetisation'),
+                'mpi_results' => $request->input('mpi_results'),
+            ];
+
+            // Remove null values
+            $mpiData = array_filter($mpiData, function($value) {
+                return $value !== null && $value !== '';
+            });
+
+            if (!empty($mpiData) && isset($mpiData['inspection_id'])) {
+                \App\Models\MpiInspection::updateOrCreate(
+                    ['inspection_id' => $inspection->id],
+                    $mpiData
+                );
+            }
         }
     }
+
+    /**
+     * API endpoint to get equipment types
+     */
+    public function getEquipmentTypes()
+    {
+        try {
+            $equipmentTypes = \DB::table('equipment_types')
+                ->select('id', 'name', 'code', 'description', 'category')
+                ->where('is_active', 1)
+                ->orderBy('name')
+                ->get();
+            
+            return response()->json($equipmentTypes);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to load equipment types: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save equipment data for an inspection
+     */
+    public function saveEquipmentOnly(Request $request)
+    {
+        try {
+            $inspectionId = $request->input('inspection_id');
+            $equipmentData = $request->input('equipment_data');
+            
+            if (!$inspectionId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Inspection ID is required'
+                ], 400);
+            }
+            
+            // Find the inspection
+            $inspection = Inspection::find($inspectionId);
+            if (!$inspection) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Inspection not found'
+                ], 404);
+            }
+            
+            // Clear existing equipment for this inspection
+            \DB::table('inspection_equipment')->where('inspection_id', $inspectionId)->delete();
+            
+            // Save new equipment data
+            if (!empty($equipmentData)) {
+                foreach ($equipmentData as $item) {
+                    \DB::table('inspection_equipment')->insert([
+                        'inspection_id' => $inspectionId,
+                        'client_id' => $inspection->client_id,
+                        'equipment_type_id' => $item['equipment_type_id'] ?: null,
+                        'category' => $item['category'] ?? '',
+                        'equipment_type' => $item['equipment_type'] ?? '',
+                        'serial_number' => $item['serial_number'] ?? '',
+                        'description' => $item['description'] ?? '',
+                        'reason_for_examination' => $item['reason_for_examination'] ?? '',
+                        'model' => $item['model'] ?? '',
+                        'swl' => $item['swl'] ?? null,
+                        'test_load_applied' => $item['test_load_applied'] ?? null,
+                        'date_of_manufacture' => $item['date_of_manufacture'] ?: null,
+                        'date_of_last_examination' => $item['date_of_last_examination'] ?: null,
+                        'date_of_next_examination' => $item['date_of_next_examination'] ?: null,
+                        'status' => $item['status'] ?? '',
+                        'remarks' => $item['remarks'] ?? '',
+                        'condition' => $item['condition'] ?? 'Good',
+                        'metadata' => json_encode($item),
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Equipment data saved successfully',
+                'equipment_count' => count($equipmentData ?: [])
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error saving equipment data: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save equipment data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

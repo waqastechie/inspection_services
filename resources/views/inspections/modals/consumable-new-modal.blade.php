@@ -10,6 +10,14 @@
                 <form id="newConsumableForm">
                     <div class="row g-3">
                         <div class="col-12">
+                            <label for="consumable_select" class="form-label">Select Existing Consumable</label>
+                            <select class="form-select" id="consumable_select" name="consumable_select">
+                                <option value="">Select a consumable or enter new details below...</option>
+                                <!-- Options will be loaded from database -->
+                            </select>
+                            <small class="form-text text-muted">Choose from existing consumables or leave blank to create new one</small>
+                        </div>
+                        <div class="col-12">
                             <label for="consumable_description" class="form-label">Description <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="consumable_description" name="consumable_description" required placeholder="e.g., Penetrant Dye, Magnetic Ink, Wire Rope">
                         </div>
@@ -71,6 +79,21 @@
                             </select>
                         </div>
                         <div class="col-12">
+                            <label for="consumable_assigned_services" class="form-label">Assigned Services</label>
+                            <select class="form-select" id="consumable_assigned_services" name="consumable_assigned_services" multiple>
+                                <option value="MPI">MPI (Magnetic Particle Inspection)</option>
+                                <option value="DPI">DPI (Dye Penetrant Inspection)</option>
+                                <option value="UT">UT (Ultrasonic Testing)</option>
+                                <option value="RT">RT (Radiographic Testing)</option>
+                                <option value="PT">PT (Penetrant Testing)</option>
+                                <option value="NDT">NDT (Non-Destructive Testing)</option>
+                                <option value="Load Testing">Load Testing</option>
+                                <option value="Visual Inspection">Visual Inspection</option>
+                                <option value="General Inspection">General Inspection</option>
+                            </select>
+                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple services</small>
+                        </div>
+                        <div class="col-12">
                             <label for="consumable_notes" class="form-label">Notes</label>
                             <textarea class="form-control" id="consumable_notes" name="consumable_notes" rows="2" placeholder="Additional notes about usage, storage, or observations..."></textarea>
                         </div>
@@ -84,6 +107,64 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load consumables from database
+    @if(isset($consumables) && count($consumables) > 0)
+    const consumablesData = @json($consumables);
+    const consumableSelect = document.getElementById('consumable_select');
+    
+    if (consumableSelect && consumablesData) {
+        // Populate the select dropdown
+        consumablesData.forEach(function(consumable) {
+            const option = document.createElement('option');
+            option.value = consumable.id;
+            option.textContent = `${consumable.name} (${consumable.type})`;
+            option.setAttribute('data-consumable', JSON.stringify(consumable));
+            consumableSelect.appendChild(option);
+        });
+        
+        // Handle selection change
+        consumableSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                const consumableData = JSON.parse(selectedOption.getAttribute('data-consumable'));
+                populateConsumableForm(consumableData);
+            } else {
+                clearConsumableForm();
+            }
+        });
+    }
+    @endif
+    
+    // Function to populate form with selected consumable data
+    function populateConsumableForm(consumable) {
+        document.getElementById('consumable_description').value = consumable.name || '';
+        document.getElementById('consumable_unit').value = consumable.unit || '';
+        document.getElementById('consumable_manufacturer').value = consumable.brand_manufacturer || '';
+        document.getElementById('consumable_batch_number').value = consumable.batch_lot_number || '';
+        document.getElementById('consumable_expiry_date').value = consumable.expiry_date || '';
+        document.getElementById('consumable_condition').value = consumable.condition || 'new';
+        
+        // Clear fields that don't exist in database
+        document.getElementById('consumable_product_code').value = '';
+        document.getElementById('consumable_cost').value = '';
+        document.getElementById('consumable_supplier').value = '';
+        
+        // Make description field readonly when selecting from database
+        document.getElementById('consumable_description').readOnly = true;
+        document.getElementById('consumable_description').classList.add('bg-light');
+    }
+    
+    // Function to clear and enable form for new consumable
+    function clearConsumableForm() {
+        document.getElementById('newConsumableForm').reset();
+        document.getElementById('consumable_description').readOnly = false;
+        document.getElementById('consumable_description').classList.remove('bg-light');
+    }
+});
+</script>
 
 <!-- Edit Consumable Modal -->
 <div class="modal fade" id="editConsumableModal" tabindex="-1" aria-labelledby="editConsumableModalLabel" aria-hidden="true">
@@ -157,6 +238,21 @@
                                 <option value="expired">Expired</option>
                                 <option value="damaged">Damaged</option>
                             </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="edit_consumable_assigned_services" class="form-label">Assigned Services</label>
+                            <select class="form-select" id="edit_consumable_assigned_services" name="consumable_assigned_services" multiple>
+                                <option value="MPI">MPI (Magnetic Particle Inspection)</option>
+                                <option value="DPI">DPI (Dye Penetrant Inspection)</option>
+                                <option value="UT">UT (Ultrasonic Testing)</option>
+                                <option value="RT">RT (Radiographic Testing)</option>
+                                <option value="PT">PT (Penetrant Testing)</option>
+                                <option value="NDT">NDT (Non-Destructive Testing)</option>
+                                <option value="Load Testing">Load Testing</option>
+                                <option value="Visual Inspection">Visual Inspection</option>
+                                <option value="General Inspection">General Inspection</option>
+                            </select>
+                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple services</small>
                         </div>
                         <div class="col-12">
                             <label for="edit_consumable_notes" class="form-label">Notes</label>

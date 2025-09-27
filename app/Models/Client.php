@@ -59,7 +59,7 @@ class Client extends Model
     // Relationships
     public function inspections()
     {
-        return $this->hasMany(Inspection::class, 'client_name', 'client_name');
+        return $this->hasMany(Inspection::class, 'client_id');
     }
 
     // Accessors

@@ -110,6 +110,16 @@
         <div id="selectedServicesInputs">
             <!-- Hidden inputs will be generated here -->
         </div>
+
+        <!-- Inline Service Forms (hidden by default, shown when selected) -->
+        <div id="inlineServiceForms" class="mt-5">
+            <div id="liftingExaminationFormSection" style="display:none;">
+                @include('inspections.sections.lifting-examination')
+            </div>
+            <div id="mpiServiceFormSection" style="display:none;">
+                @include('inspections.sections.mpi-service')
+            </div>
+        </div>
     </div>
 </section>
 
@@ -201,83 +211,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedServicesInputs = document.getElementById('selectedServicesInputs');
     let selectedServices = [];
 
-    // Initially hide all service sections except client info and add-service
-    const sectionsToHide = [
-        'section-lifting-examination',
-        'section-load-test',
-        'section-mpi-service',
-        'section-thorough-examination',
-        'section-visual'
-        // Personnel, Equipment, Consumables, Comments should always be visible
-    ];
-    
-    sectionsToHide.forEach(sectionId => {
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.style.display = 'none';
-        }
-    });
+
+    // Map service name to form section ID
+    const serviceFormSectionMap = {
+        'lifting-examination': 'liftingExaminationFormSection',
+        'mpi-service': 'mpiServiceFormSection'
+    };
 
     serviceCards.forEach(card => {
         card.addEventListener('click', function() {
             const serviceName = this.dataset.service;
             const serviceTitle = this.querySelector('.card-title').textContent;
-            const relatedSection = this.dataset.section;
-            
+
             if (this.classList.contains('selected')) {
                 // Deselect service
                 this.classList.remove('selected');
                 selectedServices = selectedServices.filter(s => s.name !== serviceName);
-                
-                // Hide related section with smooth animation
-                if (relatedSection) {
-                    const section = document.getElementById(relatedSection);
-                    if (section) {
-                        // Animate hide
-                        section.style.opacity = '0';
-                        section.style.transform = 'translateY(-10px)';
-                        setTimeout(() => {
-                            section.style.display = 'none';
-                        }, 300);
-                    }
-                }
             } else {
                 // Select service
                 this.classList.add('selected');
                 selectedServices.push({
                     name: serviceName,
-                    title: serviceTitle,
-                    section: relatedSection
+                    title: serviceTitle
                 });
-                
-                // Show related section with smooth animation
-                if (relatedSection) {
-                    const section = document.getElementById(relatedSection);
-                    if (section) {
-                        section.style.display = 'block';
-                        section.style.opacity = '0';
-                        section.style.transform = 'translateY(-10px)';
-                        
-                        // Animate show
-                        setTimeout(() => {
-                            section.style.opacity = '1';
-                            section.style.transform = 'translateY(0)';
-                        }, 10);
-                        
-                        // Smooth scroll to section
-                        setTimeout(() => {
-                            section.scrollIntoView({ 
-                                behavior: 'smooth', 
-                                block: 'start' 
-                            });
-                        }, 300);
-                    }
-                }
             }
-            
+
             updateSelectedServicesDisplay();
+            updateInlineServiceForms();
         });
     });
+
+    function updateInlineServiceForms() {
+        // Hide all service form sections
+        Object.values(serviceFormSectionMap).forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
+        });
+        // Show selected service form sections
+        selectedServices.forEach(service => {
+            const sectionId = serviceFormSectionMap[service.name];
+            if (sectionId) {
+                const section = document.getElementById(sectionId);
+                if (section) section.style.display = 'block';
+            }
+        });
+    }
 
     function updateSelectedServicesDisplay() {
         if (selectedServices.length === 0) {
@@ -287,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         selectedServicesAlert.style.display = 'block';
-        
+
         // Update badges
         selectedServicesList.innerHTML = selectedServices.map(service => 
             `<span class="badge bg-primary">
@@ -299,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedServicesInputs.innerHTML = selectedServices.map(service => 
             `<input type="hidden" name="selected_services[]" value="${service.name}">`
         ).join('');
-        
+
         // Update section indicator
         const sectionIndicator = document.querySelector('#section-add-service .section-indicator i');
         if (sectionIndicator) {

@@ -12,6 +12,10 @@
     <meta name="author" content="Professional Inspection Services">
     <meta name="robots" content="noindex, nofollow">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        // Expose base URL for JS to build correct API paths in all environments
+        window.APP_BASE_URL = "{{ rtrim(url('/'), '/') }}"; // e.g., http://localhost/inspection_services/public or http://127.0.0.1:8000
+    </script>
 
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -26,9 +30,16 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
     <!-- PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Alpine.js for reactive components -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 
     <!-- Professional Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +50,8 @@
     <link rel="stylesheet" href="{{ asset('css/inspection-form.css') }}">
     <!-- Enhanced Tablet & iPad Responsive Styles -->
     <link rel="stylesheet" href="{{ asset('css/tablet-responsive.css') }}">
+    <!-- Pagination Styles -->
+    <link rel="stylesheet" href="{{ asset('css/pagination.css') }}">
     <style>
         :root {
             --primary-color: #1e40af;
@@ -337,6 +350,12 @@
 
     <!-- Select2 JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- DataTables JavaScript -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
     @stack('scripts')
 

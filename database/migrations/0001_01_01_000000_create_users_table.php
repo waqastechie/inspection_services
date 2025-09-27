@@ -17,6 +17,13 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role', 32)->default('inspector'); // allow any role, including 'qa'
+            $table->boolean('is_active')->default(true);
+            $table->string('phone')->nullable();
+            $table->string('department')->nullable();
+            $table->string('certification')->nullable();
+            $table->date('certification_expiry')->nullable();
+            $table->timestamp('last_login')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

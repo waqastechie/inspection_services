@@ -45,74 +45,326 @@
                         <i class="fas fa-print me-2"></i>
                         Print
                     </button>
+                    
+                    @if(auth()->user()->canApproveInspections() && ($inspection->qa_status === 'pending_qa' || $inspection->qa_status === 'under_qa_review'))
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-shield-check me-2"></i>QA Review
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('qa.review', $inspection) }}">
+                                        <i class="fas fa-clipboard-check me-2"></i>Review Inspection
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <h6 class="dropdown-header">Quick Actions</h6>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item text-success" onclick="quickQAAction('approve')">
+                                        <i class="fas fa-check-circle me-2"></i>Quick Approve
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item text-warning" onclick="quickQAAction('revision')">
+                                        <i class="fas fa-edit me-2"></i>Request Revision
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    @elseif(auth()->user()->canApproveInspections() && $inspection->qa_status)
+                        <span class="badge bg-{{ $inspection->qa_status_color }} fs-6">
+                            <i class="fas fa-shield-check me-1"></i>{{ $inspection->qa_status_name }}
+                        </span>
+                    @endif
                 </div>
             </div>
 
-            <!-- Basic Information -->
+            <!-- Step Navigation (Quick Jump) -->
             <div class="row mb-4">
-                <div class="col-lg-8">
+                <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-info-circle me-2"></i>Basic Information
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Client:</strong> {{ $inspection->client_name }}</p>
-                                    <p><strong>Project:</strong> {{ $inspection->project_name }}</p>
-                                    <p><strong>Location:</strong> {{ $inspection->location }}</p>
-                                    <p><strong>Inspection Date:</strong> {{ $inspection->inspection_date->format('d/m/Y') }}</p>
-                                    @if($inspection->weather_conditions)
-                                        <p><strong>Weather:</strong> {{ $inspection->weather_conditions }}</p>
-                                    @endif
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Lead Inspector:</strong> {{ $inspection->lead_inspector_name }}</p>
-                                    <p><strong>Certification:</strong> {{ $inspection->lead_inspector_certification }}</p>
-                                    <p><strong>Report Date:</strong> {{ $inspection->report_date->format('d/m/Y') }}</p>
-                                    @if($inspection->temperature)
-                                        <p><strong>Temperature:</strong> {{ $inspection->temperature }}°C</p>
-                                    @endif
-                                    @if($inspection->humidity)
-                                        <p><strong>Humidity:</strong> {{ $inspection->humidity }}%</p>
-                                    @endif
-                                </div>
+                        <div class="card-body py-2">
+                            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                <a href="#step1" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-info-circle me-1"></i>Step 1: Client Info
+                                </a>
+                                <a href="#step2" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-tools me-1"></i>Step 2: Equipment Details
+                                </a>
+                                <a href="#step3" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-list-check me-1"></i>Step 3: Services
+                                </a>
+                                <a href="#step4" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-cogs me-1"></i>Step 4: Equipment Assignments
+                                </a>
+                                <a href="#step5" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-boxes me-1"></i>Step 5: Consumables
+                                </a>
+                                <a href="#step6" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-camera me-1"></i>Step 6: Images
+                                </a>
+                                <a href="#step7" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-comments me-1"></i>Step 7: Final Review
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-cogs me-2"></i>Equipment Under Test
-                            </h5>
+            </div>
+
+            <!-- Step 1: Client Information & Job Details -->
+            <div id="step1" class="row mb-5">
+                <div class="col-12">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Step 1: Client Information & Job Details
+                            </h4>
+                            <small class="opacity-75">Basic client and project information</small>
                         </div>
                         <div class="card-body">
-                            <p><strong>Type:</strong> {{ $inspection->equipment_type ?? '-' }}</p>
-                            <p><strong>Description:</strong> {{ $inspection->equipment_description ?? '-' }}</p>
-                            <p><strong>Manufacturer:</strong> {{ $inspection->manufacturer ?? '-' }}</p>
-                            <p><strong>Model:</strong> {{ $inspection->model ?? '-' }}</p>
-                            <p><strong>Serial Number:</strong> {{ $inspection->serial_number ?? '-' }}</p>
-                            <p><strong>Capacity:</strong> {{ $inspection->capacity ?? '-' }} {{ $inspection->capacity_unit ?? '' }}</p>
-                            <p><strong>Year:</strong> {{ $inspection->manufacture_year ?? '-' }}</p>
-                            <p><strong>Notes:</strong> {{ $inspection->general_notes ?? '-' }}</p>
+                            <div class="row">
+                                <!-- Client Information -->
+                                <div class="col-lg-6">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-building me-2"></i>Client Information
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Client:</strong> {{ $inspection->client?->client_name ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Project Name:</strong> {{ $inspection->project_name ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Location:</strong> {{ $inspection->location ?? 'N/A' }}</p>
+                                        </div>
+                                        @if($inspection->contract)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Contract:</strong> {{ $inspection->contract }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->work_order)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Work Order:</strong> {{ $inspection->work_order }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->purchase_order)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Purchase Order:</strong> {{ $inspection->purchase_order }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->client_job_reference || $inspection->job_ref)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Job Reference:</strong> {{ $inspection->client_job_reference ?? $inspection->job_ref }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Job Details -->
+                                <div class="col-lg-6">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-clipboard-list me-2"></i>Job Details
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Inspection Date:</strong> {{ $inspection->inspection_date ? $inspection->inspection_date->format('d/m/Y') : 'Not set' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Report Date:</strong> {{ $inspection->report_date ? $inspection->report_date->format('d/m/Y') : 'Not set' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Lead Inspector:</strong> {{ $inspection->lead_inspector_name ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Inspector Certification:</strong> {{ $inspection->lead_inspector_certification ?? 'N/A' }}</p>
+                                        </div>
+                                        @if($inspection->standards)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Standards:</strong> {{ $inspection->standards }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->local_procedure_number)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Local Procedure:</strong> {{ $inspection->local_procedure_number }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->drawing_number)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Drawing Number:</strong> {{ $inspection->drawing_number }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->area_of_examination)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Area of Examination:</strong> {{ $inspection->area_of_examination }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->test_restrictions)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Test Restrictions:</strong> {{ $inspection->test_restrictions }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Environmental Conditions -->
+                            @if($inspection->weather_conditions || $inspection->temperature || $inspection->humidity)
+                                <hr class="my-4">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-cloud-sun me-2"></i>Environmental Conditions
+                                        </h6>
+                                        <div class="row g-2">
+                                            @if($inspection->weather_conditions)
+                                                <div class="col-md-4">
+                                                    <p class="mb-2"><strong>Weather:</strong> {{ $inspection->weather_conditions }}</p>
+                                                </div>
+                                            @endif
+                                            @if($inspection->temperature)
+                                                <div class="col-md-4">
+                                                    <p class="mb-2"><strong>Temperature:</strong> {{ $inspection->temperature }}°C</p>
+                                                </div>
+                                            @endif
+                                            @if($inspection->humidity)
+                                                <div class="col-md-4">
+                                                    <p class="mb-2"><strong>Humidity:</strong> {{ $inspection->humidity }}%</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Services -->
-            @if($inspection->services->count() > 0)
-                <div class="row mb-4">
+            <!-- Step 2: Equipment Details -->
+            <div id="step2" class="row mb-5">
+                <div class="col-12">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-tools me-2"></i>
+                                Step 2: Equipment Details
+                            </h4>
+                            <small class="opacity-75">Equipment under test specifications</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <h6 class="text-success mb-3">
+                                        <i class="fas fa-cogs me-2"></i>Equipment Specifications
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Equipment Type:</strong> 
+                                                @if($inspection->equipmentType)
+                                                    {{ $inspection->equipmentType->name }}
+                                                @elseif($inspection->equipment_type && !is_numeric($inspection->equipment_type))
+                                                    {{ $inspection->equipment_type }}
+                                                @elseif($inspection->equipment_type && is_numeric($inspection->equipment_type))
+                                                    Equipment ID: {{ $inspection->equipment_type }}
+                                                @else
+                                                    N/A
+                                                @endif
+                                            </p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Description:</strong> {{ $inspection->equipment_description ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Manufacturer:</strong> {{ $inspection->manufacturer ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Model:</strong> {{ $inspection->model ?? 'N/A' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Serial Number:</strong> {{ $inspection->serial_number ?? 'N/A' }}</p>
+                                        </div>
+                                        @if($inspection->asset_tag)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Asset Tag:</strong> {{ $inspection->asset_tag }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <h6 class="text-success mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>Technical Details
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Capacity:</strong> {{ $inspection->capacity ?? 'N/A' }} {{ $inspection->capacity_unit ?? '' }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="mb-2"><strong>Manufacturing Year:</strong> {{ $inspection->manufacture_year ?? 'N/A' }}</p>
+                                        </div>
+                                        @if($inspection->applicable_standard)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Applicable Standard:</strong> {{ $inspection->applicable_standard }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->inspection_class)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Inspection Class:</strong> {{ $inspection->inspection_class }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->certification_body)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Certification Body:</strong> {{ $inspection->certification_body }}</p>
+                                            </div>
+                                        @endif
+                                        @if($inspection->surface_condition)
+                                            <div class="col-12">
+                                                <p class="mb-2"><strong>Surface Condition:</strong> {{ $inspection->surface_condition }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            @if($inspection->general_notes)
+                                <hr class="my-4">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6 class="text-success mb-3">
+                                            <i class="fas fa-sticky-note me-2"></i>Equipment Notes
+                                        </h6>
+                                        <div class="bg-light p-3 rounded">
+                                            {{ $inspection->general_notes }}
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Step 3: Services -->
+            @php
+                $hasLiftingExamination = $inspection->liftingExamination !== null;
+                $hasMpiInspection = $inspection->mpiInspection !== null;
+                $totalServiceData = $inspection->services->count() + ($hasLiftingExamination ? 1 : 0) + ($hasMpiInspection ? 1 : 0);
+            @endphp
+            @if($inspection->services->count() > 0 || $hasLiftingExamination || $hasMpiInspection)
+                <div id="step3" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-list-check me-2"></i>Selected Services ({{ $inspection->services->count() }})
-                                </h5>
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-list-check me-2"></i>
+                                    Step 3: Selected Services ({{ $totalServiceData }})
+                                </h4>
+                                <small class="opacity-75">Inspection services and detailed examination data</small>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -124,69 +376,155 @@
                                                         <h6 class="mb-0 text-primary fw-bold">
                                                             <i class="fas fa-cog me-2"></i>{{ $service->service_type_name }}
                                                         </h6>
-                                                        <span class="badge bg-{{ $service->status_color }} fs-6">{{ ucfirst($service->status) }}</span>
+                                                       
                                                     </div>
                                                 </div>
                                                 <div class="card-body">
                                                     @php
-                                                        $serviceData = is_string($service->service_data) ? json_decode($service->service_data, true) : $service->service_data;
-                                                        $serviceData = $serviceData ?: [];
+                                                        $serviceData = $service->service_data;
+                                                        
+                                                        // Handle JSON decoding - could be string or already array
+                                                        if (is_string($serviceData)) {
+                                                            $decoded = json_decode($serviceData, true);
+                                                            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                                                $serviceData = $decoded;
+                                                            } else {
+                                                                // Try double-decode for double-encoded JSON
+                                                                $doubleDecoded = json_decode(json_decode($serviceData, true), true);
+                                                                if (json_last_error() === JSON_ERROR_NONE && is_array($doubleDecoded)) {
+                                                                    $serviceData = $doubleDecoded;
+                                                                } else {
+                                                                    $serviceData = [];
+                                                                }
+                                                            }
+                                                        } elseif (!is_array($serviceData)) {
+                                                            $serviceData = [];
+                                                        }
                                                     @endphp
                                                     
-                                                    @if(isset($serviceData['service_name']))
+                                                    {{-- Service Name - handle multiple possible field names --}}
+                                                    @php
+                                                        $serviceName = $serviceData['service_name'] ?? $serviceData['name'] ?? null;
+                                                    @endphp
+                                                    @if($serviceName)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Service Name:</strong>
-                                                            <p class="mb-1">{{ $serviceData['service_name'] }}</p>
+                                                            <p class="mb-1">{{ $serviceName }}</p>
                                                         </div>
                                                     @endif
                                                     
-                                                    @if(isset($serviceData['service_description']))
+                                                    {{-- Service Description - handle multiple possible field names --}}
+                                                    @php
+                                                        $serviceDescription = $serviceData['service_description'] ?? $serviceData['description'] ?? null;
+                                                    @endphp
+                                                    @if($serviceDescription)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Description:</strong>
-                                                            <p class="mb-1 text-muted">{{ $serviceData['service_description'] }}</p>
+                                                            <p class="mb-1 text-muted">{{ $serviceDescription }}</p>
                                                         </div>
                                                     @endif
                                                     
-                                                    @if(isset($serviceData['test_parameters']))
+                                                    {{-- Test Parameters - handle multiple possible field names --}}
+                                                    @php
+                                                        $testParameters = $serviceData['test_parameters'] ?? $serviceData['parameters'] ?? null;
+                                                    @endphp
+                                                    @if($testParameters)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Test Parameters:</strong>
-                                                            <p class="mb-1">{{ $serviceData['test_parameters'] }}</p>
+                                                            <p class="mb-1">{{ $testParameters }}</p>
                                                         </div>
                                                     @endif
                                                     
-                                                    @if(isset($serviceData['acceptance_criteria']))
+                                                    {{-- Acceptance Criteria - handle multiple possible field names --}}
+                                                    @php
+                                                        $acceptanceCriteria = $serviceData['acceptance_criteria'] ?? $serviceData['criteria'] ?? null;
+                                                    @endphp
+                                                    @if($acceptanceCriteria)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Acceptance Criteria:</strong>
-                                                            <p class="mb-1">{{ $serviceData['acceptance_criteria'] }}</p>
+                                                            <p class="mb-1">{{ $acceptanceCriteria }}</p>
                                                         </div>
                                                     @endif
                                                     
-                                                    @if(isset($serviceData['applicable_codes']))
+                                                    {{-- Applicable Codes - handle multiple possible field names --}}
+                                                    @php
+                                                        $applicableCodes = $serviceData['applicable_codes'] ?? $serviceData['codes'] ?? null;
+                                                    @endphp
+                                                    @if($applicableCodes)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Applicable Codes:</strong>
-                                                            <p class="mb-1">{{ $serviceData['applicable_codes'] }}</p>
+                                                            <p class="mb-1">{{ $applicableCodes }}</p>
                                                         </div>
                                                     @endif
                                                     
                                                     <div class="row">
-                                                        @if(isset($serviceData['estimated_duration']))
+                                                        {{-- Duration - handle multiple possible field names --}}
+                                                        @php
+                                                            $duration = $serviceData['estimated_duration'] ?? $serviceData['duration'] ?? null;
+                                                        @endphp
+                                                        @if($duration)
                                                             <div class="col-6">
                                                                 <div class="mb-3">
                                                                     <strong class="text-primary">Duration:</strong>
-                                                                    <p class="mb-1">{{ $serviceData['estimated_duration'] }}</p>
+                                                                    <p class="mb-1">{{ $duration }}</p>
                                                                 </div>
                                                             </div>
                                                         @endif
                                                         
-                                                        @if(isset($serviceData['cost_estimate']))
+                                                        {{-- Cost - handle multiple possible field names --}}
+                                                        @php
+                                                            $cost = $serviceData['cost_estimate'] ?? $serviceData['cost'] ?? null;
+                                                        @endphp
+                                                        @if($cost)
                                                             <div class="col-6">
                                                                 <div class="mb-3">
                                                                     <strong class="text-primary">Cost Estimate:</strong>
-                                                                    <p class="mb-1">${{ number_format($serviceData['cost_estimate']) }}</p>
+                                                                    <p class="mb-1">${{ is_numeric($cost) ? number_format($cost) : $cost }}</p>
                                                                 </div>
                                                             </div>
                                                         @endif
                                                     </div>
+                                                    
+                                                    {{-- Additional service data fields - show any remaining data --}}
+                                                    @php
+                                                        $displayedFields = ['service_name', 'name', 'service_description', 'description', 
+                                                                          'test_parameters', 'parameters', 'acceptance_criteria', 'criteria',
+                                                                          'applicable_codes', 'codes', 'estimated_duration', 'duration',
+                                                                          'cost_estimate', 'cost', 'section_data'];
+                                                        $remainingData = array_diff_key($serviceData, array_flip($displayedFields));
+                                                    @endphp
+                                                    @if(!empty($remainingData))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Additional Information:</strong>
+                                                            <div class="bg-light p-2 rounded mt-2">
+                                                                @foreach($remainingData as $key => $value)
+                                                                    @if(!is_array($value))
+                                                                        <div class="small">
+                                                                            <strong>{{ ucwords(str_replace('_', ' ', $key)) }}:</strong>
+                                                                            {{ $value }}
+                                                                        </div>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    {{-- Show section data if available --}}
+                                                    @if(isset($serviceData['section_data']) && is_array($serviceData['section_data']))
+                                                        <div class="mb-3">
+                                                            <strong class="text-primary">Section Details:</strong>
+                                                            <div class="bg-light p-2 rounded mt-2">
+                                                                @foreach($serviceData['section_data'] as $sectionKey => $sectionValue)
+                                                                    @if(!is_array($sectionValue))
+                                                                        <div class="small">
+                                                                            <strong>{{ ucwords(str_replace('_', ' ', $sectionKey)) }}:</strong>
+                                                                            {{ $sectionValue }}
+                                                                        </div>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
                                                     
                                                     @if($service->notes)
                                                         <div class="mb-3">
@@ -255,125 +593,521 @@
                                             </div>
                                         </div>
                                     @endforeach
+
+                                    <!-- Service-specific examination data -->
+                                    @if($hasLiftingExamination || $hasMpiInspection)
+                                        <div class="col-12 mt-4">
+                                            <hr>
+                                            <h6 class="text-info mb-3">
+                                                <i class="fas fa-microscope me-2"></i>Detailed Examination Data
+                                            </h6>
+                                        </div>
+
+                                        @if($hasLiftingExamination)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-success">
+                                                    <div class="card-header bg-success text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-clipboard-check me-2"></i>Lifting Equipment Examination
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Inspector:</strong>
+                                                                <p class="mb-2">{{ $inspection->liftingExamination->inspector_name }}</p>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <strong class="text-success">First Examination:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->isFirstExamination() ? 'primary' : 'secondary' }}">
+                                                                        {{ $inspection->liftingExamination->first_examination === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->liftingExamination->equipment_installation_details)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Installation Details:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->equipment_installation_details }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Safe to Operate:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->isSafeToOperate() ? 'success' : 'danger' }}">
+                                                                        {{ $inspection->liftingExamination->safe_to_operate === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Defects Found:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->hasDefects() ? 'warning' : 'success' }}">
+                                                                        {{ $inspection->liftingExamination->equipment_defect === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->liftingExamination->defect_description)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Defect Description:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->defect_description }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->liftingExamination->test_details)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Test Details:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->test_details }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12 mt-3">
+                                                                <strong class="text-success">Overall Status:</strong>
+                                                                <span class="badge bg-{{ $inspection->liftingExamination->overall_status === 'satisfactory' ? 'success' : 'danger' }} ms-2">
+                                                                    {{ ucfirst($inspection->liftingExamination->overall_status) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->liftingExamination->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($hasMpiInspection)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-warning">
+                                                    <div class="card-header bg-warning text-dark">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-search me-2"></i>Magnetic Particle Inspection (MPI)
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-warning">Inspector:</strong>
+                                                                <p class="mb-2">{{ $inspection->mpiInspection->inspector_name }}</p>
+                                                            </div>
+                                                            @if($inspection->mpiInspection->contrast_paint_method)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Contrast Paint Method:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->contrast_paint_method_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->magnetic_flow)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Magnetic Flow:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->magnetic_flow_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->current_flow)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Current Flow:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->current_flow_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->ink_powder_1_method)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Test Method:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->ink_powder_1_method_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->test_temperature)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Test Temperature:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->test_temperature }}°C</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->black_light_intensity_begin || $inspection->mpiInspection->black_light_intensity_end)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Black Light Intensity:</strong>
+                                                                    <p class="mb-2">
+                                                                        Begin: {{ $inspection->mpiInspection->black_light_intensity_begin ?? 'N/A' }} μW/cm²
+                                                                        | End: {{ $inspection->mpiInspection->black_light_intensity_end ?? 'N/A' }} μW/cm²
+                                                                    </p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->mpi_results)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">MPI Results:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->mpiInspection->mpi_results }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12 mt-3">
+                                                                <strong class="text-warning">Overall Status:</strong>
+                                                                <span class="badge bg-{{ $inspection->mpiInspection->overall_status === 'completed' ? 'success' : ($inspection->mpiInspection->overall_status === 'defects_found' ? 'danger' : 'secondary') }} ms-2">
+                                                                    {{ ucfirst(str_replace('_', ' ', $inspection->mpiInspection->overall_status)) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->mpiInspection->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            @else
+                <!-- Check for service-specific data in dedicated tables -->
+                @php
+                    $hasLiftingExamination = $inspection->liftingExamination !== null;
+                    $hasMpiInspection = $inspection->mpiInspection !== null;
+                    $totalServiceData = ($hasLiftingExamination ? 1 : 0) + ($hasMpiInspection ? 1 : 0);
+                @endphp
+
+                @if($totalServiceData > 0)
+                    <!-- Step 3 with service-specific data -->
+                    <div id="step3" class="row mb-5">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h4 class="card-title mb-0">
+                                        <i class="fas fa-list-check me-2"></i>
+                                        Step 3: Selected Services ({{ $totalServiceData }})
+                                    </h4>
+                                    <small class="opacity-75">Inspection services and detailed examination data</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        @if($hasLiftingExamination)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-success">
+                                                    <div class="card-header bg-success text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-clipboard-check me-2"></i>Lifting Equipment Examination
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Inspector:</strong>
+                                                                <p class="mb-2">{{ $inspection->liftingExamination->inspector_name }}</p>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <strong class="text-success">First Examination:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->isFirstExamination() ? 'primary' : 'secondary' }}">
+                                                                        {{ $inspection->liftingExamination->first_examination === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->liftingExamination->equipment_installation_details)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Installation Details:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->equipment_installation_details }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Safe to Operate:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->isSafeToOperate() ? 'success' : 'danger' }}">
+                                                                        {{ $inspection->liftingExamination->safe_to_operate === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <strong class="text-success">Defects Found:</strong>
+                                                                <p class="mb-2">
+                                                                    <span class="badge bg-{{ $inspection->liftingExamination->hasDefects() ? 'warning' : 'success' }}">
+                                                                        {{ $inspection->liftingExamination->equipment_defect === 'yes' ? 'Yes' : 'No' }}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->liftingExamination->defect_description)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Defect Description:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->defect_description }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->liftingExamination->test_details)
+                                                                <div class="col-12">
+                                                                    <strong class="text-success">Test Details:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->liftingExamination->test_details }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12 mt-3">
+                                                                <strong class="text-success">Overall Status:</strong>
+                                                                <span class="badge bg-{{ $inspection->liftingExamination->overall_status === 'satisfactory' ? 'success' : 'danger' }} ms-2">
+                                                                    {{ ucfirst($inspection->liftingExamination->overall_status) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->liftingExamination->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($hasMpiInspection)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-warning">
+                                                    <div class="card-header bg-warning text-dark">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-search me-2"></i>Magnetic Particle Inspection (MPI)
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-warning">Inspector:</strong>
+                                                                <p class="mb-2">{{ $inspection->mpiInspection->inspector_name }}</p>
+                                                            </div>
+                                                            @if($inspection->mpiInspection->contrast_paint_method)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Contrast Paint Method:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->contrast_paint_method_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->magnetic_flow)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Magnetic Flow:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->magnetic_flow_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->current_flow)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Current Flow:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->current_flow_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->ink_powder_1_method)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Test Method:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->ink_powder_1_method_name }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->test_temperature)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Test Temperature:</strong>
+                                                                    <p class="mb-2">{{ $inspection->mpiInspection->test_temperature }}°C</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->black_light_intensity_begin || $inspection->mpiInspection->black_light_intensity_end)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">Black Light Intensity:</strong>
+                                                                    <p class="mb-2">
+                                                                        Begin: {{ $inspection->mpiInspection->black_light_intensity_begin ?? 'N/A' }} μW/cm²
+                                                                        | End: {{ $inspection->mpiInspection->black_light_intensity_end ?? 'N/A' }} μW/cm²
+                                                                    </p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->mpiInspection->mpi_results)
+                                                                <div class="col-12">
+                                                                    <strong class="text-warning">MPI Results:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->mpiInspection->mpi_results }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                            <div class="col-12 mt-3">
+                                                                <strong class="text-warning">Overall Status:</strong>
+                                                                <span class="badge bg-{{ $inspection->mpiInspection->overall_status === 'completed' ? 'success' : ($inspection->mpiInspection->overall_status === 'defects_found' ? 'danger' : 'secondary') }} ms-2">
+                                                                    {{ ucfirst(str_replace('_', ' ', $inspection->mpiInspection->overall_status)) }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->mpiInspection->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <!-- Empty Step 3 placeholder -->
+                    <div id="step3" class="row mb-5">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h4 class="card-title mb-0">
+                                        <i class="fas fa-list-check me-2"></i>
+                                        Step 3: Selected Services (0)
+                                    </h4>
+                                    <small class="opacity-75">Inspection services and test methods</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                        <p class="mb-0">No services have been selected for this inspection.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             @endif
 
-            <!-- Personnel Assignments -->
-            @if($inspection->personnelAssignments->count() > 0)
-                <div class="row mb-4">
+            <!-- Step 4: Equipment Assignments -->
+            @if($inspection->equipmentAssignments->count() > 0 || $inspection->inspectionEquipment->count() > 0)
+                <div id="step4" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-users me-2"></i>Personnel Assignments ({{ $inspection->personnelAssignments->count() }})
-                                </h5>
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-tools me-2"></i>
+                                    Step 4: Equipment Assignments ({{ $inspection->equipmentAssignments->count() + $inspection->inspectionEquipment->count() }})
+                                </h4>
+                                <small class="opacity-75">Testing and inspection equipment assignments</small>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Role</th>
-                                                <th>Certification</th>
-                                                <th>Expiry</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($inspection->personnelAssignments as $person)
+                                @if($inspection->equipmentAssignments->count() > 0)
+                                    <h6 class="text-warning mb-3">
+                                        <i class="fas fa-tools me-2"></i>Testing Equipment
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
                                                 <tr>
-                                                    <td>{{ $person->personnel_name }}</td>
-                                                    <td>{{ $person->role_position }}</td>
-                                                    <td>
-                                                        @if($person->certification_level)
-                                                            {{ $person->certification_level }}
-                                                            @if($person->certification_number)
-                                                                <br><small class="text-muted">{{ $person->certification_number }}</small>
-                                                            @endif
-                                                        @else
-                                                            <span class="text-muted">-</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @if($person->certification_expiry)
-                                                            {{ $person->certification_expiry->format('d/m/Y') }}
-                                                            @if($person->is_certification_expiring)
-                                                                <br><span class="badge bg-warning">Expiring Soon</span>
-                                                            @elseif($person->is_certification_expired)
-                                                                <br><span class="badge bg-danger">Expired</span>
-                                                            @endif
-                                                        @else
-                                                            <span class="text-muted">-</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge bg-success">{{ $person->status }}</span>
-                                                    </td>
+                                                    <th>Equipment Name</th>
+                                                    <th>Type</th>
+                                                    <th>Brand/Model</th>
+                                                    <th>Serial Number</th>
+                                                    <th>Calibration</th>
+                                                    <th>Condition</th>
                                                 </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($inspection->equipmentAssignments as $equipment)
+                                                    <tr>
+                                                        <td>{{ $equipment->equipment_name }}</td>
+                                                        <td>{{ $equipment->equipment_type_name }}</td>
+                                                        <td>{{ $equipment->brand_model ?? '-' }}</td>
+                                                        <td>{{ $equipment->serial_number ?? '-' }}</td>
+                                                        <td>
+                                                            @if($equipment->calibration_due)
+                                                                Due: {{ $equipment->calibration_due->format('d/m/Y') }}
+                                                                @if($equipment->is_calibration_due)
+                                                                    <br><span class="badge bg-warning">Due Soon</span>
+                                                                @elseif($equipment->is_calibration_overdue)
+                                                                    <br><span class="badge bg-danger">Overdue</span>
+                                                                @endif
+                                                            @else
+                                                                <span class="text-muted">Not Required</span>
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-success">{{ $equipment->condition }}</span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+
+                                @if($inspection->inspectionEquipment->count() > 0)
+                                    @if($inspection->equipmentAssignments->count() > 0)
+                                        <hr class="my-4">
+                                    @endif
+                                    <h6 class="text-warning mb-3">
+                                        <i class="fas fa-cogs me-2"></i>Equipment Under Inspection
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Category</th>
+                                                    <th>Equipment Type</th>
+                                                    <th>Serial Number</th>
+                                                    <th>Description</th>
+                                                    <th>SWL</th>
+                                                    <th>Test Load</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($inspection->inspectionEquipment as $equipment)
+                                                    <tr>
+                                                        <td>
+                                                            <span class="badge bg-secondary">{{ ucfirst($equipment->category) }}</span>
+                                                        </td>
+                                                        <td>{{ $equipment->equipment_type }}</td>
+                                                        <td>{{ $equipment->serial_number ?? '-' }}</td>
+                                                        <td>{{ $equipment->description ?? '-' }}</td>
+                                                        <td>
+                                                            @if($equipment->swl)
+                                                                {{ number_format($equipment->swl, 2) }} T
+                                                            @else
+                                                                -
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            @if($equipment->test_load_applied)
+                                                                {{ number_format($equipment->test_load_applied, 2) }} T
+                                                            @else
+                                                                -
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-{{ $equipment->status === 'pass' ? 'success' : ($equipment->status === 'fail' ? 'danger' : 'warning') }}">
+                                                                {{ ucfirst($equipment->status ?: 'Pending') }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
-            @endif
-
-            <!-- Equipment Assignments -->
-            @if($inspection->equipmentAssignments->count() > 0)
-                <div class="row mb-4">
+            @else
+                <!-- Empty Step 4 placeholder -->
+                <div id="step4" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-tools me-2"></i>Equipment Assignments ({{ $inspection->equipmentAssignments->count() }})
-                                </h5>
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-tools me-2"></i>
+                                    Step 4: Equipment Assignments (0)
+                                </h4>
+                                <small class="opacity-75">Testing and inspection equipment assignments</small>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Equipment Name</th>
-                                                <th>Type</th>
-                                                <th>Brand/Model</th>
-                                                <th>Serial Number</th>
-                                                <th>Calibration</th>
-                                                <th>Condition</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($inspection->equipmentAssignments as $equipment)
-                                                <tr>
-                                                    <td>{{ $equipment->equipment_name }}</td>
-                                                    <td>{{ $equipment->equipment_type_name }}</td>
-                                                    <td>{{ $equipment->brand_model ?? '-' }}</td>
-                                                    <td>{{ $equipment->serial_number ?? '-' }}</td>
-                                                    <td>
-                                                        @if($equipment->calibration_due)
-                                                            Due: {{ $equipment->calibration_due->format('d/m/Y') }}
-                                                            @if($equipment->is_calibration_due)
-                                                                <br><span class="badge bg-warning">Due Soon</span>
-                                                            @elseif($equipment->is_calibration_overdue)
-                                                                <br><span class="badge bg-danger">Overdue</span>
-                                                            @endif
-                                                        @else
-                                                            <span class="text-muted">Not Required</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge bg-success">{{ $equipment->condition }}</span>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                    <p class="mb-0">No equipment assignments found for this inspection.</p>
                                 </div>
                             </div>
                         </div>
@@ -381,15 +1115,17 @@
                 </div>
             @endif
 
-            <!-- Consumables -->
+            <!-- Step 5: Consumables -->
             @if($inspection->consumableAssignments->count() > 0)
-                <div class="row mb-4">
+                <div id="step5" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-boxes me-2"></i>Consumables ({{ $inspection->consumableAssignments->count() }})
-                                </h5>
+                        <div class="card border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-boxes me-2"></i>
+                                    Step 5: Consumables ({{ $inspection->consumableAssignments->count() }})
+                                </h4>
+                                <small class="opacity-75">Materials and consumables used in inspection</small>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -452,102 +1188,138 @@
                         </div>
                     </div>
                 </div>
-            @endif
-
-            <!-- General Notes -->
-            @if($inspection->general_notes)
-                <div class="row mb-4">
+            @else
+                <!-- Empty Step 5 placeholder -->
+                <div id="step5" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-sticky-note me-2"></i>General Notes
-                                </h5>
+                        <div class="card border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-boxes me-2"></i>
+                                    Step 5: Consumables (0)
+                                </h4>
+                                <small class="opacity-75">Materials and consumables used in inspection</small>
                             </div>
                             <div class="card-body">
-                                <p class="mb-0">{{ $inspection->general_notes }}</p>
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                    <p class="mb-0">No consumables were assigned to this inspection.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             @endif
 
-            <!-- Inspection Images -->
+            <!-- Step 6: Images & Documentation -->
             @php
-                $inspection_images = $inspection->inspection_images;
-                if (is_string($inspection_images)) {
-                    $inspection_images = json_decode($inspection_images, true) ?: [];
-                }
-                $inspection_images = $inspection_images ?: [];
+                // Get images using the new relationship
+                $images = $inspection->images;
+                
+                // Determine format based on image type - check if it's InspectionImage model instances
+                $useNewFormat = $images->count() > 0 && $images->first() instanceof \App\Models\InspectionImage;
             @endphp
-            @if(is_array($inspection_images) && count($inspection_images) > 0)
-                <div class="row mb-4">
+            
+            @if($images && $images->count() > 0)
+                <div id="step6" class="row mb-5">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-camera me-2"></i>Inspection Images ({{ count($inspection_images) }})
-                                </h5>
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-camera me-2"></i>
+                                    Step 6: Images & Documentation ({{ $images->count() }})
+                                </h4>
+                                <small class="opacity-75">Inspection photos and supporting documentation</small>
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
-                                    @foreach($inspection_images as $index => $image)
-                                        @php
-                                            // Handle both complex image objects and simple file paths
-                                            if (is_string($image)) {
-                                                // Simple file path
-                                                $imageData = [
-                                                    'dataUrl' => asset($image),
-                                                    'name' => basename($image),
-                                                    'caption' => '',
-                                                    'size' => 'Unknown size',
-                                                    'uploadedAt' => null
-                                                ];
-                                            } else {
-                                                // Complex image object
-                                                $imageData = is_string($image) ? json_decode($image, true) : $image;
-                                            }
-                                        @endphp
-                                        @if($imageData && (isset($imageData['dataUrl']) || isset($imageData['url'])))
-                                            @php
-                                                $imageUrl = $imageData['dataUrl'] ?? $imageData['url'] ?? asset($image);
-                                                $imageName = $imageData['name'] ?? basename($image) ?? 'Inspection Image ' . ($index + 1);
-                                                $imageCaption = $imageData['caption'] ?? '';
-                                                $imageSize = $imageData['size'] ?? 'Unknown size';
-                                                $uploadDate = isset($imageData['uploadedAt']) ? \Carbon\Carbon::parse($imageData['uploadedAt'])->format('d/m/Y H:i') : null;
-                                            @endphp
+                                    @foreach($images as $index => $image)
+                                        @if($useNewFormat)
+                                            {{-- New format with InspectionImage model --}}
                                             <div class="col-md-6 col-lg-4">
                                                 <div class="card inspection-image-card h-100">
                                                     <div class="position-relative">
-                                                        <img src="{{ $imageUrl }}" 
-                                                             alt="{{ $imageName }}" 
+                                                        <img src="{{ $image->url }}" 
+                                                             alt="{{ $image->original_name }}" 
                                                              class="card-img-top inspection-image-preview"
                                                              style="height: 200px; object-fit: cover; cursor: pointer;"
-                                                             onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')">
+                                                             onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')">
                                                         <div class="position-absolute top-0 end-0 m-2">
                                                             <button type="button" class="btn btn-light btn-sm rounded-circle" 
-                                                                    onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')"
+                                                                    onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')"
                                                                     title="View Full Size">
                                                                 <i class="fas fa-expand"></i>
                                                             </button>
                                                         </div>
                                                     </div>
                                                     <div class="card-body">
-                                                        <h6 class="card-title text-truncate" title="{{ $imageName }}">
-                                                            {{ $imageName }}
+                                                        <h6 class="card-title text-truncate" title="{{ $image->original_name }}">
+                                                            {{ $image->original_name }}
                                                         </h6>
-                                                        @if(!empty($imageCaption))
-                                                            <p class="card-text small text-muted">{{ $imageCaption }}</p>
+                                                        @if($image->caption)
+                                                            <p class="card-text small text-muted">{{ $image->caption }}</p>
                                                         @endif
                                                         <div class="d-flex justify-content-between align-items-center">
-                                                            <small class="text-muted">{{ $imageSize }}</small>
-                                                            @if($uploadDate)
-                                                                <small class="text-muted">{{ $uploadDate }}</small>
-                                                            @endif
+                                                            <small class="text-muted">{{ $image->formatted_size }}</small>
+                                                            <small class="text-muted">{{ $image->created_at ? $image->created_at->format('d/m/Y H:i') : 'Unknown date' }}</small>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                        @else
+                                            {{-- Old format with JSON data --}}
+                                            @php
+                                                $imageData = is_string($image) ? json_decode($image, true) : $image;
+                                                if (is_string($image)) {
+                                                    $imageData = [
+                                                        'dataUrl' => asset($image),
+                                                        'name' => basename($image),
+                                                        'caption' => '',
+                                                        'size' => 'Unknown size'
+                                                    ];
+                                                }
+                                            @endphp
+                                            @if($imageData && (isset($imageData['dataUrl']) || isset($imageData['url'])))
+                                                @php
+                                                    $imageUrl = $imageData['dataUrl'] ?? $imageData['url'] ?? asset($image);
+                                                    $imageName = $imageData['name'] ?? basename($image) ?? 'Inspection Image ' . ($index + 1);
+                                                    $imageCaption = $imageData['caption'] ?? '';
+                                                    $imageSize = $imageData['size'] ?? 'Unknown size';
+                                                    $uploadDate = isset($imageData['uploadedAt']) ? \Carbon\Carbon::parse($imageData['uploadedAt'])->format('d/m/Y H:i') : null;
+                                                @endphp
+                                                <div class="col-md-6 col-lg-4">
+                                                    <div class="card inspection-image-card h-100">
+                                                        <div class="position-relative">
+                                                            <img src="{{ $imageUrl }}" 
+                                                                 alt="{{ $imageName }}" 
+                                                                 class="card-img-top inspection-image-preview"
+                                                                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                                                                 onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')">
+                                                            <div class="position-absolute top-0 end-0 m-2">
+                                                                <button type="button" class="btn btn-light btn-sm rounded-circle" 
+                                                                        onclick="showImageModal('{{ $imageUrl }}', '{{ $imageName }}', '{{ $imageCaption }}')"
+                                                                        title="View Full Size">
+                                                                    <i class="fas fa-expand"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <h6 class="card-title text-truncate" title="{{ $imageName }}">
+                                                                {{ $imageName }}
+                                                            </h6>
+                                                            @if(!empty($imageCaption))
+                                                                <p class="card-text small text-muted">{{ $imageCaption }}</p>
+                                                            @endif
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <small class="text-muted">{{ $imageSize }}</small>
+                                                                @if($uploadDate)
+                                                                    <small class="text-muted">{{ $uploadDate }}</small>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         @endif
                                     @endforeach
                                 </div>
@@ -555,7 +1327,262 @@
                         </div>
                     </div>
                 </div>
+            @else
+                <!-- Empty Step 6 placeholder -->
+                <div id="step6" class="row mb-5">
+                    <div class="col-12">
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fas fa-camera me-2"></i>
+                                    Step 6: Images & Documentation (0)
+                                </h4>
+                                <small class="opacity-75">Inspection photos and supporting documentation</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                    <p class="mb-0">No images or documentation were uploaded for this inspection.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             @endif
+
+            <!-- Step 7: Final Review & Results -->
+            <div id="step7" class="row mb-5">
+                <div class="col-12">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fas fa-comments me-2"></i>
+                                Step 7: Final Review & Results
+                            </h4>
+                            <small class="opacity-75">Inspector comments, findings, and recommendations</small>
+                        </div>
+                        <div class="card-body">
+                            <!-- Comments & Recommendations -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6 class="text-danger mb-3">
+                                        <i class="fas fa-comment-dots me-2"></i>Inspector Comments
+                                    </h6>
+                                    <div class="bg-light p-3 rounded">
+                                        {{ $inspection->inspector_comments ?: 'No comments provided' }}
+                                    </div>
+
+                                    <h6 class="text-danger mt-4 mb-3">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Defects Found
+                                    </h6>
+                                    <div class="bg-light p-3 rounded">
+                                        {{ $inspection->defects_found ?: 'No defects reported' }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-danger mb-3">
+                                        <i class="fas fa-lightbulb me-2"></i>Recommendations
+                                    </h6>
+                                    <div class="bg-light p-3 rounded">
+                                        {{ $inspection->recommendations ?: 'No recommendations provided' }}
+                                    </div>
+
+                                    <h6 class="text-danger mt-4 mb-3">
+                                        <i class="fas fa-check-circle me-2"></i>Overall Result
+                                    </h6>
+                                    <div class="mb-3">
+                                        @if($inspection->overall_result)
+                                            <span class="badge bg-{{ $inspection->overall_result === 'pass' ? 'success' : ($inspection->overall_result === 'fail' ? 'danger' : 'warning') }} fs-6">
+                                                {{ ucfirst(str_replace('_', ' ', $inspection->overall_result)) }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary fs-6">Not set</span>
+                                        @endif
+                                    </div>
+
+                                    @if($inspection->next_inspection_date)
+                                        <h6 class="text-danger mt-4 mb-3">
+                                            <i class="fas fa-calendar-alt me-2"></i>Next Inspection Date
+                                        </h6>
+                                        <div class="bg-light p-3 rounded">
+                                            {{ Carbon\Carbon::parse($inspection->next_inspection_date)->format('d/m/Y') }}
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Service Inspector Assignments -->
+                            @if($inspection->lifting_examination_inspector || $inspection->load_test_inspector || $inspection->thorough_examination_inspector || $inspection->mpi_service_inspector || $inspection->visual_inspector)
+                                <hr class="my-4">
+                                <h6 class="text-danger mb-3">
+                                    <i class="fas fa-user-check me-2"></i>Service Inspector Assignments
+                                </h6>
+                                <div class="row">
+                                    @if($inspection->lifting_examination_inspector)
+                                        @php $liftingInspector = \App\Models\Personnel::find($inspection->lifting_examination_inspector); @endphp
+                                        <div class="col-md-6 mb-3">
+                                            <div class="border p-3 rounded">
+                                                <strong class="text-primary">Lifting Examination Inspector:</strong>
+                                                <div class="mt-2">
+                                                    @if($liftingInspector)
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-user-check text-success me-2"></i>
+                                                            <span>{{ $liftingInspector->first_name }} {{ $liftingInspector->last_name }}</span>
+                                                        </div>
+                                                        @if($liftingInspector->position)
+                                                            <small class="text-muted">{{ $liftingInspector->position }}</small>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Inspector ID: {{ $inspection->lifting_examination_inspector }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if($inspection->load_test_inspector)
+                                        @php $loadTestInspector = \App\Models\Personnel::find($inspection->load_test_inspector); @endphp
+                                        <div class="col-md-6 mb-3">
+                                            <div class="border p-3 rounded">
+                                                <strong class="text-primary">Load Test Inspector:</strong>
+                                                <div class="mt-2">
+                                                    @if($loadTestInspector)
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-user-check text-success me-2"></i>
+                                                            <span>{{ $loadTestInspector->first_name }} {{ $loadTestInspector->last_name }}</span>
+                                                        </div>
+                                                        @if($loadTestInspector->position)
+                                                            <small class="text-muted">{{ $loadTestInspector->position }}</small>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Inspector ID: {{ $inspection->load_test_inspector }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if($inspection->thorough_examination_inspector)
+                                        @php $thoroughInspector = \App\Models\Personnel::find($inspection->thorough_examination_inspector); @endphp
+                                        <div class="col-md-6 mb-3">
+                                            <div class="border p-3 rounded">
+                                                <strong class="text-primary">Thorough Examination Inspector:</strong>
+                                                <div class="mt-2">
+                                                    @if($thoroughInspector)
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-user-check text-success me-2"></i>
+                                                            <span>{{ $thoroughInspector->first_name }} {{ $thoroughInspector->last_name }}</span>
+                                                        </div>
+                                                        @if($thoroughInspector->position)
+                                                            <small class="text-muted">{{ $thoroughInspector->position }}</small>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Inspector ID: {{ $inspection->thorough_examination_inspector }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if($inspection->mpi_service_inspector)
+                                        @php $mpiInspector = \App\Models\Personnel::find($inspection->mpi_service_inspector); @endphp
+                                        <div class="col-md-6 mb-3">
+                                            <div class="border p-3 rounded">
+                                                <strong class="text-primary">MPI Service Inspector:</strong>
+                                                <div class="mt-2">
+                                                    @if($mpiInspector)
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-user-check text-success me-2"></i>
+                                                            <span>{{ $mpiInspector->first_name }} {{ $mpiInspector->last_name }}</span>
+                                                        </div>
+                                                        @if($mpiInspector->position)
+                                                            <small class="text-muted">{{ $mpiInspector->position }}</small>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Inspector ID: {{ $inspection->mpi_service_inspector }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if($inspection->visual_inspector)
+                                        @php $visualInspector = \App\Models\Personnel::find($inspection->visual_inspector); @endphp
+                                        <div class="col-md-6 mb-3">
+                                            <div class="border p-3 rounded">
+                                                <strong class="text-primary">Visual Inspector:</strong>
+                                                <div class="mt-2">
+                                                    @if($visualInspector)
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="fas fa-user-check text-success me-2"></i>
+                                                            <span>{{ $visualInspector->first_name }} {{ $visualInspector->last_name }}</span>
+                                                        </div>
+                                                        @if($visualInspector->position)
+                                                            <small class="text-muted">{{ $visualInspector->position }}</small>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Inspector ID: {{ $inspection->visual_inspector }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
+                            <!-- Personnel Assignments -->
+                            @if($inspection->personnelAssignments->count() > 0)
+                                <hr class="my-4">
+                                <h6 class="text-danger mb-3">
+                                    <i class="fas fa-users me-2"></i>Personnel Assignments ({{ $inspection->personnelAssignments->count() }})
+                                </h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Role</th>
+                                                <th>Certification</th>
+                                                <th>Expiry</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($inspection->personnelAssignments as $person)
+                                                <tr>
+                                                    <td>{{ $person->personnel_name }}</td>
+                                                    <td>{{ $person->role_position }}</td>
+                                                    <td>
+                                                        @if($person->certification_level)
+                                                            {{ $person->certification_level }}
+                                                            @if($person->certification_number)
+                                                                <br><small class="text-muted">{{ $person->certification_number }}</small>
+                                                            @endif
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($person->certification_expiry)
+                                                            {{ $person->certification_expiry->format('d/m/Y') }}
+                                                            @if($person->is_certification_expiring)
+                                                                <br><span class="badge bg-warning">Expiring Soon</span>
+                                                            @elseif($person->is_certification_expired)
+                                                                <br><span class="badge bg-danger">Expired</span>
+                                                            @endif
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ $person->status }}</span>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -698,4 +1725,94 @@ function showImageModal(imageSrc, imageName, imageCaption) {
     bsModal.show();
 }
 </script>
+
+@push('styles')
+<style>
+/* Smooth scrolling for anchor links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Step cards styling */
+.card.border-primary,
+.card.border-success,
+.card.border-info,
+.card.border-warning,
+.card.border-secondary,
+.card.border-dark,
+.card.border-danger {
+    border-width: 2px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+/* Step header styling */
+.card-header h4 {
+    font-weight: 600;
+}
+
+.card-header small {
+    font-size: 0.85rem;
+}
+
+/* Navigation buttons styling */
+.btn-sm {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.75rem;
+}
+
+/* Improve table responsiveness */
+.table-responsive {
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+/* Step navigation enhancement */
+.step-nav-card {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+
+/* Badge styling improvements */
+.badge {
+    font-size: 0.75rem;
+}
+
+/* Print styles */
+@media print {
+    .btn, .btn-group {
+        display: none !important;
+    }
+    
+    .card.border-primary .card-header,
+    .card.border-success .card-header,
+    .card.border-info .card-header,
+    .card.border-warning .card-header,
+    .card.border-secondary .card-header,
+    .card.border-dark .card-header,
+    .card.border-danger .card-header {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .d-flex.flex-wrap.gap-2 {
+        flex-direction: column;
+    }
+    
+    .btn-sm {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-header h4 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+@endpush
+
 @endsection

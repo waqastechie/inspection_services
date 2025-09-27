@@ -1,209 +1,163 @@
-<!-- Client & Report Details Section - Based on PDF Format -->
-<section class="form-section" id="section-client">
-    <div class="section-header">
-        <h2 class="section-title">
-            <i class="fas fa-building"></i>
-            Client & Report Details
-        </h2>
-        <p class="section-description">
-            Client information and report identification details
-        </p>
+{{-- Client Information Section --}}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-building me-2"></i>Client Information
+        </h5>
     </div>
-
-    <div class="section-content">
-        <div class="row g-4">
-            <!-- CLIENT DETAILS (Left Column) -->
-            <div class="col-md-6">
-                <h5 class="mb-3">Client Details</h5>
-                
-                <!-- Client Selection (Super Admin only) -->
-                @if(auth()->user() && in_array(auth()->user()->role, ['admin', 'super_admin']))
-                <div class="mb-3">
-                    <label for="clientSelect" class="form-label">Select Client *</label>
-                    <select id="clientSelect" name="client_select" class="form-control searchable-dropdown">
-                        <option value="">Search and select client...</option>
-                        @if(isset($inspection) && $inspection->client_name)
-                            <option value="{{ $inspection->client_name }}" selected>{{ $inspection->client_name }}</option>
-                        @endif
-                    </select>
-                    <div class="form-text">Start typing to search for existing clients. The client name will be automatically populated below.</div>
-                </div>
-                @endif
-                
-                <!-- Client Name -->
-                <div class="mb-3">
-                    <label for="clientName" class="form-label">Client Name *</label>
-                    <input type="text" class="form-control @error('client_name') is-invalid @enderror" 
-                           id="clientName" name="client_name" 
-                           value="{{ old('client_name', $inspection?->client_name ?? '') }}" 
-                           placeholder="e.g., Saipem Trechville" required>
-                    <div class="form-text">This field will be auto-filled when you select a client above.</div>
-                    @error('client_name')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Project Name -->
-                <div class="mb-3">
-                    <label for="projectName" class="form-label">Project Name *</label>
-                    <input type="text" class="form-control @error('project_name') is-invalid @enderror" 
-                           id="projectName" name="project_name" 
-                           value="{{ old('project_name', $inspection?->project_name ?? '') }}" 
-                           placeholder="e.g., Platform Maintenance Project" required>
-                    @error('project_name')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Location of Examination -->
-                <div class="mb-3">
-                    <label for="location" class="form-label">Location of Examination *</label>
-                    <input type="text" class="form-control @error('location') is-invalid @enderror" 
-                           id="location" name="location" 
-                           value="{{ old('location', $inspection?->location ?? '') }}" 
-                           placeholder="e.g., GEV YARD" required>
-                    @error('location')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Client Selection -->
+            <div class="col-md-6 mb-3">
+                <label for="client_id" class="form-label required">Client</label>
+                <select class="form-select @error('client_id') is-invalid @enderror" 
+                        id="client_id" name="client_id" required>
+                    <option value="">Select Client</option>
+                    @if(isset($clients) && $clients->count() > 0)
+                        @foreach($clients as $client)
+                            <option value="{{ $client->id }}" 
+                                    {{ (old('client_id', $inspection->client_id ?? '') == $client->id) ? 'selected' : '' }}>
+                                {{ $client->display_name }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No clients found - Please add clients first</option>
+                    @endif
+                </select>
+                @error('client_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
 
-            <!-- REPORT DETAILS (Right Column) -->
-            <div class="col-md-6">
-                <h5 class="mb-3">Report Details</h5>
-                
-                <!-- Report Number (Auto-generated) -->
-                <div class="mb-3">
-                    <label for="reportNumber" class="form-label">Report Number</label>
-                    <input type="text" class="form-control" id="reportNumber" 
-                           value="Auto-generated on submit" readonly>
-                </div>
-
-                <!-- Date of Examination -->
-                <div class="mb-3">
-                    <label for="inspectionDate" class="form-label">Date of Examination *</label>
-                    <input type="date" class="form-control @error('inspection_date') is-invalid @enderror" 
-                           id="inspectionDate" name="inspection_date" 
-                           value="{{ old('inspection_date', $inspection?->inspection_date?->format('Y-m-d') ?? date('Y-m-d')) }}" required>
-                    @error('inspection_date')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Area of Examination -->
-                <div class="mb-3">
-                    <label for="areaOfExamination" class="form-label">Area of Examination</label>
-                    <input type="text" class="form-control" name="area_of_examination" 
-                           value="{{ old('area_of_examination', $inspection?->area_of_examination ?? '') }}" 
-                           placeholder="e.g., The whole unit and lifting set">
-                </div>
-
-                <!-- Services -->
-                <div class="mb-3">
-                    <label for="services" class="form-label">Services Performed</label>
-                    <input type="text" class="form-control" name="services_performed" 
-                           value="{{ old('services_performed', $inspection?->services_performed ?? '') }}" 
-                           placeholder="e.g., Load Test, Lifting Examination, Thorough Examination, MPI, Visual">
-                </div>
-
-                <!-- Weather Conditions -->
-                <div class="mb-3">
-                    <label for="weatherConditions" class="form-label">Weather Conditions</label>
-                    <input type="text" class="form-control" name="weather_conditions" 
-                           value="{{ old('weather_conditions', $inspection?->weather_conditions ?? '') }}" 
-                           placeholder="e.g., Clear, Overcast, Light Rain">
-                </div>
-
-                <!-- Temperature and Humidity -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="temperature" class="form-label">Temperature (°C)</label>
-                            <input type="number" class="form-control" name="temperature" 
-                                   value="{{ old('temperature', $inspection?->temperature ?? '') }}" 
-                                   placeholder="25" step="0.1">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="humidity" class="form-label">Humidity (%)</label>
-                            <input type="number" class="form-control" name="humidity" 
-                                   value="{{ old('humidity', $inspection?->humidity ?? '') }}" 
-                                   placeholder="65" min="0" max="100">
-                        </div>
-                    </div>
-                </div>
+            <!-- Inspection Date -->
+            <div class="col-md-6 mb-3">
+                <label for="inspection_date" class="form-label required">Inspection Date</label>
+                <input type="date" 
+                       class="form-control @error('inspection_date') is-invalid @enderror" 
+                       id="inspection_date" 
+                       name="inspection_date" 
+                       value="{{ old('inspection_date', $inspection->inspection_date ?? now()->format('Y-m-d')) }}" 
+                       required>
+                @error('inspection_date')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
         </div>
 
-        <!-- JOB DETAILS Section -->
-        <div class="row g-4 mt-4">
-            <div class="col-12">
-                <h5 class="mb-3">Job Details</h5>
-            </div>
-            
-            <div class="col-md-3">
-                <label for="contract" class="form-label">Contract</label>
-                <input type="text" class="form-control" name="contract" 
-                       value="{{ old('contract', $inspection?->contract ?? '') }}" 
-                       placeholder="N/A">
-            </div>
-
-            <div class="col-md-3">
-                <label for="workOrder" class="form-label">Work Order</label>
-                <input type="text" class="form-control" name="work_order" 
-                       value="{{ old('work_order', $inspection?->work_order ?? '') }}" 
-                       placeholder="GEV-CI 26268">
+        <div class="row">
+            <!-- Location -->
+            <div class="col-md-6 mb-3">
+                <label for="location" class="form-label">Location</label>
+                <input type="text" 
+                       class="form-control @error('location') is-invalid @enderror" 
+                       id="location" 
+                       name="location" 
+                       value="{{ old('location', $inspection->location ?? '') }}"
+                       placeholder="Inspection location">
+                @error('location')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
 
-            <div class="col-md-3">
-                <label for="purchaseOrder" class="form-label">Purchase Order</label>
-                <input type="text" class="form-control" name="purchase_order" 
-                       value="{{ old('purchase_order', $inspection?->purchase_order ?? '') }}" 
-                       placeholder="N/A">
-            </div>
-
-            <div class="col-md-3">
-                <label for="clientJobReference" class="form-label">Client Job Reference</label>
-                <input type="text" class="form-control" name="client_job_reference" 
-                       value="{{ old('client_job_reference', $inspection?->client_job_reference ?? '') }}" 
-                       placeholder="OK">
-            </div>
-
-            <div class="col-md-4">
-                <label for="standards" class="form-label">Standards</label>
-                <input type="text" class="form-control" name="standards" 
-                       value="{{ old('standards', $inspection?->standards ?? '') }}" 
-                       placeholder="DNV 2.7-1">
-            </div>
-
-            <div class="col-md-4">
-                <label for="localProcedureNumber" class="form-label">Local Procedure Number</label>
-                <input type="text" class="form-control" name="local_procedure_number" 
-                       value="{{ old('local_procedure_number', $inspection?->local_procedure_number ?? '') }}" 
-                       placeholder="TEP 042 - Rev6">
-            </div>
-
-            <div class="col-md-4">
-                <label for="drawingNumber" class="form-label">Drawing Number</label>
-                <input type="text" class="form-control" name="drawing_number" 
-                       value="{{ old('drawing_number', $inspection?->drawing_number ?? '') }}" 
-                       placeholder="N/A">
-            </div>
-
-            <div class="col-md-6">
-                <label for="testRestrictions" class="form-label">Test Restrictions</label>
-                <input type="text" class="form-control" name="test_restrictions" 
-                       value="{{ old('test_restrictions', $inspection?->test_restrictions ?? '') }}" 
-                       placeholder="None at time of inspection">
-            </div>
-
-            <div class="col-md-6">
-                <label for="surfaceCondition" class="form-label">Surface Condition</label>
-                <input type="text" class="form-control" name="surface_condition" 
-                       value="{{ old('surface_condition', $inspection?->surface_condition ?? '') }}" 
-                       placeholder="Acceptable for inspection">
+            <!-- Inspector -->
+            <div class="col-md-6 mb-3">
+                <label for="inspector_id" class="form-label">Inspector</label>
+                <select class="form-select @error('inspector_id') is-invalid @enderror" 
+                        id="inspector_id" name="inspector_id">
+                    <option value="">Select Inspector</option>
+                    @if(isset($users) && $users->count() > 0)
+                        @foreach($users as $inspector)
+                            <option value="{{ $inspector->id }}" 
+                                    {{ (old('inspector_id', $inspection->inspector_id ?? auth()->id()) == $inspector->id) ? 'selected' : '' }}>
+                                {{ $inspector->name }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No inspectors found</option>
+                    @endif
+                </select>
+                @error('inspector_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
         </div>
+
+        <div class="row">
+            <!-- Project Reference -->
+            <div class="col-md-6 mb-3">
+                <label for="project_reference" class="form-label">Project Reference</label>
+                <input type="text" 
+                       class="form-control @error('project_reference') is-invalid @enderror" 
+                       id="project_reference" 
+                       name="project_reference" 
+                       value="{{ old('project_reference', $inspection->project_reference ?? '') }}"
+                       placeholder="Project or job reference">
+                @error('project_reference')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <!-- Inspection Type -->
+            <div class="col-md-6 mb-3">
+                <label for="inspection_type" class="form-label">Inspection Type</label>
+                <select class="form-select @error('inspection_type') is-invalid @enderror" 
+                        id="inspection_type" name="inspection_type">
+                    <option value="">Select Type</option>
+                    <option value="lifting_examination" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'lifting_examination') ? 'selected' : '' }}>
+                        Lifting Equipment Examination
+                    </option>
+                    <option value="mpi" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'mpi') ? 'selected' : '' }}>
+                        Magnetic Particle Inspection (MPI)
+                    </option>
+                    <option value="visual" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'visual') ? 'selected' : '' }}>
+                        Visual Inspection
+                    </option>
+                    <option value="thorough_examination" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'thorough_examination') ? 'selected' : '' }}>
+                        Thorough Examination
+                    </option>
+                    <option value="load_test" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'load_test') ? 'selected' : '' }}>
+                        Load Test
+                    </option>
+                </select>
+                @error('inspection_type')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+        </div>
+
+        <!-- Additional Notes -->
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label for="notes" class="form-label">Additional Notes</label>
+                <textarea class="form-control @error('notes') is-invalid @enderror" 
+                          id="notes" 
+                          name="notes" 
+                          rows="3" 
+                          placeholder="Any additional notes about this inspection">{{ old('notes', $inspection->notes ?? '') }}</textarea>
+                @error('notes')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+        </div>
+
+        @if(isset($inspection) && $inspection->inspection_number)
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Inspection Number:</strong> {{ $inspection->inspection_number }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-secondary">
+                        <i class="fas fa-calendar me-2"></i>
+                        <strong>Status:</strong> 
+                        <span class="badge bg-{{ $inspection->status === 'draft' ? 'warning' : ($inspection->status === 'completed' ? 'success' : 'primary') }}">
+                            {{ ucfirst(str_replace('_', ' ', $inspection->status)) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
-</section>
+</div>

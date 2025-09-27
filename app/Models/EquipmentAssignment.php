@@ -15,8 +15,15 @@ class EquipmentAssignment extends Model
         'equipment_id',
         'equipment_name',
         'equipment_type',
+        'equipment_category',
+        'equipment_type_id',
         'make_model',
         'serial_number',
+        'description',
+        'reason_for_examination',
+        'swl',
+        'test_load_applied',
+        'date_of_manufacture',
         'condition',
         'calibration_status',
         'last_calibration_date',
@@ -29,7 +36,10 @@ class EquipmentAssignment extends Model
     protected $casts = [
         'last_calibration_date' => 'date',
         'next_calibration_date' => 'date',
+        'date_of_manufacture' => 'date',
         'assigned_services' => 'array',
+        'swl' => 'decimal:2',
+        'test_load_applied' => 'decimal:2',
     ];
 
     /**
@@ -46,6 +56,14 @@ class EquipmentAssignment extends Model
     public function equipment(): BelongsTo
     {
         return $this->belongsTo(Equipment::class);
+    }
+
+    /**
+     * Get the equipment type associated with this assignment.
+     */
+    public function equipmentType(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentType::class);
     }
 
     /**

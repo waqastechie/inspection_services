@@ -147,8 +147,11 @@ class ConsumableController extends Controller
             $query->byCondition($request->condition);
         }
 
-        $consumables = $query->get(['id', 'name', 'type', 'brand_manufacturer', 'quantity_available', 'unit']);
+        $consumables = $query->get(['id', 'description', 'type', 'manufacturer', 'unit']);
 
-        return response()->json($consumables);
+        return response()->json([
+            'success' => true,
+            'consumables' => $consumables
+        ]);
     }
 }

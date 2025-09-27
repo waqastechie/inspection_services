@@ -209,7 +209,6 @@ class CompleteInspectionSeeder extends Seeder
                     'estimated_duration' => '4 hours',
                     'cost_estimate' => 2500.00
                 ],
-                'status' => 'completed',
                 'notes' => 'All structural connections inspected and found satisfactory'
             ],
             [
@@ -223,7 +222,6 @@ class CompleteInspectionSeeder extends Seeder
                     'estimated_duration' => '2 hours',
                     'cost_estimate' => 1800.00
                 ],
-                'status' => 'completed',
                 'notes' => 'Load test passed successfully - no deformation observed'
             ],
             [
@@ -237,7 +235,6 @@ class CompleteInspectionSeeder extends Seeder
                     'estimated_duration' => '3 hours',
                     'cost_estimate' => 1200.00
                 ],
-                'status' => 'completed',
                 'notes' => 'All welds examined - no relevant indications found'
             ],
             [
@@ -251,7 +248,6 @@ class CompleteInspectionSeeder extends Seeder
                     'estimated_duration' => '2 hours',
                     'cost_estimate' => 800.00
                 ],
-                'status' => 'completed',
                 'notes' => 'Visual inspection completed - minor corrosion noted and documented'
             ]
         ];
@@ -261,7 +257,6 @@ class CompleteInspectionSeeder extends Seeder
                 'inspection_id' => $inspection->id,
                 'service_type' => $service['service_type'],
                 'service_data' => json_encode($service['service_data']),
-                'status' => $service['status'],
                 'notes' => $service['notes']
             ]);
         }

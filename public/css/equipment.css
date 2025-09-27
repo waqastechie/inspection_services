@@ -1,0 +1,31 @@
+/* Equipment modal flicker fix: scope to modals only */
+
+/* Smooth, non-transform hover for cards INSIDE modals */
+.modal .card {
+    /* Prevent global `.card:hover { transform: ... }` from moving content */
+    transform: none !important;
+    transition: box-shadow 0.2s ease !important;
+    will-change: auto;
+}
+
+.modal .card:hover,
+.modal .card:focus,
+.modal .card:active {
+    /* Keep position fixed to avoid mouse re-enter loops */
+    transform: none !important;
+}
+
+/* Help some GPUs avoid repaint flicker on complex layers */
+.modal-dialog, .modal-content {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Keep nicer hover on equipment cards outside modals, but without movement */
+.equipment-card .card {
+    box-shadow: var(--shadow-md);
+}
+.equipment-card .card:hover {
+    box-shadow: var(--shadow-lg);
+}

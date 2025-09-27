@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['super_admin', 'admin', 'inspector', 'viewer'])->default('inspector');
-            $table->boolean('is_active')->default(true);
-            $table->string('phone')->nullable();
-            $table->string('department')->nullable();
-            $table->string('certification')->nullable();
-            $table->date('certification_expiry')->nullable();
-            $table->timestamp('last_login')->nullable();
+            // Use string for role instead of enum for flexibility
+            $table->string('role', 32)->default('inspector')->change();
+            $table->boolean('is_active')->default(true)->change();
+            $table->string('phone')->nullable()->change();
+            $table->string('department')->nullable()->change();
+            $table->string('certification')->nullable()->change();
+            $table->date('certification_expiry')->nullable()->change();
+            $table->timestamp('last_login')->nullable()->change();
         });
     }
 

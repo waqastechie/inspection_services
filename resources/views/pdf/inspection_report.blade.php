@@ -203,7 +203,7 @@
         </tr>
         <tr>
             <td>
-                <strong>Client:</strong> {{ $inspection->client_name ?? 'N/A' }}<br>
+                <strong>Client:</strong> {{ $inspection->client?->client_name ?? 'N/A' }}<br>
                 <strong>Project:</strong> {{ $inspection->project_name ?? 'N/A' }}
             </td>
             <td>
@@ -212,7 +212,7 @@
         </tr>
         <tr>
             <td>
-                <strong>Location:</strong> {{ $inspection->location ?? 'N/A' }}
+                <strong>Serial Number:</strong> {{ $inspection->location ?? 'N/A' }}
             </td>
             <td>
                 <strong>Date of Examination:</strong> {{ $inspection->inspection_date ? $inspection->inspection_date->format('d-M-Y') : 'N/A' }}
@@ -223,24 +223,96 @@
                 <strong>Weather:</strong> {{ $inspection->weather_conditions ?? 'N/A' }}
             </td>
             <td>
-                <strong>Temperature:</strong> {{ $inspection->temperature ? $inspection->temperature . '°C' : 'N/A' }}
+                <strong>Report Date:</strong> {{ $inspection->report_date ? $inspection->report_date->format('d-M-Y') : 'N/A' }}
             </td>
         </tr>
         <tr>
             <td>
-                <strong>Humidity:</strong> {{ $inspection->humidity ? $inspection->humidity . '%' : 'N/A' }}
+                <strong>Temperature:</strong> {{ $inspection->temperature ? $inspection->temperature . '°C' : 'N/A' }}
             </td>
             <td>
-                <strong>Services:</strong> 
-                @if($inspection->services && $inspection->services->count() > 0)
-                    @foreach($inspection->services as $service)
-                        {{ $service->service_type }}@if(!$loop->last), @endif
-                    @endforeach
-                @else
-                    N/A
-                @endif
+                <strong>Humidity:</strong> {{ $inspection->humidity ? $inspection->humidity . '%' : 'N/A' }}
             </td>
         </tr>
+        @if($inspection->area_of_examination || $inspection->services_performed)
+        <tr>
+            @if($inspection->area_of_examination)
+            <td>
+                <strong>Area of Examination:</strong> {{ $inspection->area_of_examination }}
+            </td>
+            @else
+            <td></td>
+            @endif
+            @if($inspection->services_performed)
+            <td>
+                <strong>Services Performed:</strong> {{ $inspection->services_performed }}
+            </td>
+            @else
+            <td></td>
+            @endif
+        </tr>
+        @endif
+        @if($inspection->contract || $inspection->work_order)
+        <tr>
+            @if($inspection->contract)
+            <td>
+                <strong>Contract:</strong> {{ $inspection->contract }}
+            </td>
+            @else
+            <td></td>
+            @endif
+            @if($inspection->work_order)
+            <td>
+                <strong>Work Order:</strong> {{ $inspection->work_order }}
+            </td>
+            @else
+            <td></td>
+            @endif
+        </tr>
+        @endif
+        @if($inspection->purchase_order || $inspection->standards)
+        <tr>
+            @if($inspection->purchase_order)
+            <td>
+                <strong>Purchase Order:</strong> {{ $inspection->purchase_order }}
+            </td>
+            @else
+            <td></td>
+            @endif
+            @if($inspection->standards)
+            <td>
+                <strong>Standards:</strong> {{ $inspection->standards }}
+            </td>
+            @else
+            <td></td>
+            @endif
+        </tr>
+        @endif
+        @if($inspection->local_procedure_number || $inspection->drawing_number)
+        <tr>
+            @if($inspection->local_procedure_number)
+            <td>
+                <strong>Local Procedure:</strong> {{ $inspection->local_procedure_number }}
+            </td>
+            @else
+            <td></td>
+            @endif
+            @if($inspection->drawing_number)
+            <td>
+                <strong>Drawing Number:</strong> {{ $inspection->drawing_number }}
+            </td>
+            @else
+            <td></td>
+            @endif
+        </tr>
+        @endif
+        @if($inspection->test_restrictions)
+        <tr>
+            <td colspan="2">
+                <strong>Test Restrictions:</strong> {{ $inspection->test_restrictions }}
+            </td>
+        </tr>
+        @endif
     </table>
     
     <!-- Job Details -->
@@ -278,7 +350,127 @@
         </tr>
     </table>
     
+    <!-- Service Inspector Assignments -->
+    @if($inspection->lifting_examination_inspector || $inspection->load_test_inspector || $inspection->thorough_examination_inspector || $inspection->mpi_service_inspector || $inspection->visual_inspector)
+    <div class="section-header">Service Inspector Assignments</div>
+    <table class="details-table">
+        @if($inspection->lifting_examination_inspector)
+            @php $liftingInspector = \App\Models\Personnel::find($inspection->lifting_examination_inspector); @endphp
+            <tr>
+                <td class="label">Lifting Examination Inspector:</td>
+                <td>
+                    @if($liftingInspector)
+                        {{ $liftingInspector->first_name }} {{ $liftingInspector->last_name }}
+                        @if($liftingInspector->position)
+                            <br><small>{{ $liftingInspector->position }}</small>
+                        @endif
+                    @else
+                        Inspector ID: {{ $inspection->lifting_examination_inspector }}
+                    @endif
+                </td>
+            </tr>
+        @endif
+        
+        @if($inspection->load_test_inspector)
+            @php $loadTestInspector = \App\Models\Personnel::find($inspection->load_test_inspector); @endphp
+            <tr>
+                <td class="label">Load Test Inspector:</td>
+                <td>
+                    @if($loadTestInspector)
+                        {{ $loadTestInspector->first_name }} {{ $loadTestInspector->last_name }}
+                        @if($loadTestInspector->position)
+                            <br><small>{{ $loadTestInspector->position }}</small>
+                        @endif
+                    @else
+                        Inspector ID: {{ $inspection->load_test_inspector }}
+                    @endif
+                </td>
+            </tr>
+        @endif
+        
+        @if($inspection->thorough_examination_inspector)
+            @php $thoroughInspector = \App\Models\Personnel::find($inspection->thorough_examination_inspector); @endphp
+            <tr>
+                <td class="label">Thorough Examination Inspector:</td>
+                <td>
+                    @if($thoroughInspector)
+                        {{ $thoroughInspector->first_name }} {{ $thoroughInspector->last_name }}
+                        @if($thoroughInspector->position)
+                            <br><small>{{ $thoroughInspector->position }}</small>
+                        @endif
+                    @else
+                        Inspector ID: {{ $inspection->thorough_examination_inspector }}
+                    @endif
+                </td>
+            </tr>
+        @endif
+        
+        @if($inspection->mpi_service_inspector)
+            @php $mpiInspector = \App\Models\Personnel::find($inspection->mpi_service_inspector); @endphp
+            <tr>
+                <td class="label">MPI Service Inspector:</td>
+                <td>
+                    @if($mpiInspector)
+                        {{ $mpiInspector->first_name }} {{ $mpiInspector->last_name }}
+                        @if($mpiInspector->position)
+                            <br><small>{{ $mpiInspector->position }}</small>
+                        @endif
+                    @else
+                        Inspector ID: {{ $inspection->mpi_service_inspector }}
+                    @endif
+                </td>
+            </tr>
+        @endif
+        
+        @if($inspection->visual_inspector)
+            @php $visualInspector = \App\Models\Personnel::find($inspection->visual_inspector); @endphp
+            <tr>
+                <td class="label">Visual Inspector:</td>
+                <td>
+                    @if($visualInspector)
+                        {{ $visualInspector->first_name }} {{ $visualInspector->last_name }}
+                        @if($visualInspector->position)
+                            <br><small>{{ $visualInspector->position }}</small>
+                        @endif
+                    @else
+                        Inspector ID: {{ $inspection->visual_inspector }}
+                    @endif
+                </td>
+            </tr>
+        @endif
+    </table>
+    @endif
+    
     <!-- Equipment Details -->
+    <div class="section-header">Equipment Under Test</div>
+    <table class="details-table">
+        <tr>
+            <td class="label">Type:</td>
+            <td>{{ $inspection->equipment_type ?? 'N/A' }}</td>
+            <td class="label">Serial Number:</td>
+            <td>{{ $inspection->serial_number ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Description:</td>
+            <td>{{ $inspection->equipment_description ?? 'N/A' }}</td>
+            <td class="label">Model:</td>
+            <td>{{ $inspection->model ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Manufacturer:</td>
+            <td>{{ $inspection->manufacturer ?? 'N/A' }}</td>
+            <td class="label">Capacity:</td>
+            <td>{{ $inspection->capacity ? $inspection->capacity . ' ' . $inspection->capacity_unit : 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Year:</td>
+            <td>{{ $inspection->manufacture_year ?? 'N/A' }}</td>
+            <td class="label">Asset Tag:</td>
+            <td>{{ $inspection->asset_tag ?? 'N/A' }}</td>
+        </tr>
+    </table>
+    
+    <!-- Equipment Table -->
     <table class="equipment-table">
         <thead>
             <tr>
@@ -375,61 +567,88 @@
     
     @foreach($inspection->services as $service)
     @php
-        $serviceData = is_string($service->service_data) ? json_decode($service->service_data, true) : $service->service_data;
-        $serviceData = $serviceData ?: [];
+        $serviceData = $service->service_data;
+        
+        // Handle JSON decoding - could be string or already array
+        if (is_string($serviceData)) {
+            $decoded = json_decode($serviceData, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $serviceData = $decoded;
+            } else {
+                // Try double-decode for double-encoded JSON
+                $doubleDecoded = json_decode(json_decode($serviceData, true), true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($doubleDecoded)) {
+                    $serviceData = $doubleDecoded;
+                } else {
+                    $serviceData = [];
+                }
+            }
+        } elseif (!is_array($serviceData)) {
+            $serviceData = [];
+        }
     @endphp
     
     <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
         <div style="background-color: #f0f0f0; padding: 5px; font-weight: bold; margin-bottom: 10px;">
-            {{ $service->service_type_name }} - Status: {{ ucfirst($service->status) }}
+            {{ $service->service_type_name }}
         </div>
         
         <table class="details-table">
-            @if(isset($serviceData['service_name']))
+            @php
+                $serviceName = $serviceData['service_name'] ?? $serviceData['name'] ?? null;
+                $serviceDescription = $serviceData['service_description'] ?? $serviceData['description'] ?? null;
+                $testParameters = $serviceData['test_parameters'] ?? $serviceData['parameters'] ?? null;
+                $acceptanceCriteria = $serviceData['acceptance_criteria'] ?? $serviceData['criteria'] ?? null;
+                $applicableCodes = $serviceData['applicable_codes'] ?? $serviceData['codes'] ?? null;
+                $duration = $serviceData['estimated_duration'] ?? $serviceData['duration'] ?? null;
+                $cost = $serviceData['cost_estimate'] ?? $serviceData['cost'] ?? null;
+            @endphp
+            
+            @if($serviceName)
             <tr>
                 <td class="label">Service Name:</td>
-                <td>{{ $serviceData['service_name'] }}</td>
+                <td>{{ $serviceName }}</td>
             </tr>
             @endif
             
-            @if(isset($serviceData['service_description']))
+            @if($serviceDescription)
             <tr>
                 <td class="label">Description:</td>
-                <td>{{ $serviceData['service_description'] }}</td>
+                <td>{{ $serviceDescription }}</td>
             </tr>
             @endif
             
-            @if(isset($serviceData['test_parameters']))
+            @if($testParameters)
             <tr>
                 <td class="label">Test Parameters:</td>
-                <td>{{ $serviceData['test_parameters'] }}</td>
+                <td>{{ $testParameters }}</td>
             </tr>
             @endif
             
-            @if(isset($serviceData['acceptance_criteria']))
+            @if($acceptanceCriteria)
             <tr>
                 <td class="label">Acceptance Criteria:</td>
-                <td>{{ $serviceData['acceptance_criteria'] }}</td>
+                <td>{{ $acceptanceCriteria }}</td>
             </tr>
             @endif
             
-            @if(isset($serviceData['applicable_codes']))
+            @if($applicableCodes)
             <tr>
                 <td class="label">Applicable Codes:</td>
-                <td>{{ $serviceData['applicable_codes'] }}</td>
+                <td>{{ $applicableCodes }}</td>
             </tr>
             @endif
             
-            @if(isset($serviceData['estimated_duration']) || isset($serviceData['cost_estimate']))
+            @if($duration || $cost)
             <tr>
                 <td class="label">Duration & Cost:</td>
                 <td>
-                    @if(isset($serviceData['estimated_duration']))
-                        Duration: {{ $serviceData['estimated_duration'] }}
+                    @if($duration)
+                        Duration: {{ $duration }}
                     @endif
-                    @if(isset($serviceData['cost_estimate']))
-                        @if(isset($serviceData['estimated_duration'])) | @endif
-                        Cost: ${{ number_format($serviceData['cost_estimate']) }}
+                    @if($cost)
+                        @if($duration) | @endif
+                        Cost: ${{ is_numeric($cost) ? number_format($cost) : $cost }}
                     @endif
                 </td>
             </tr>
@@ -440,6 +659,275 @@
                 <td class="label">Service Notes:</td>
                 <td>{{ $service->notes }}</td>
             </tr>
+            @endif
+            
+            {{-- Show detailed examination questions and answers --}}
+            @php
+                $displayedFields = ['service_name', 'name', 'service_description', 'description', 
+                                  'test_parameters', 'parameters', 'acceptance_criteria', 'criteria',
+                                  'applicable_codes', 'codes', 'estimated_duration', 'duration',
+                                  'cost_estimate', 'cost'];
+                $remainingData = array_diff_key($serviceData, array_flip($displayedFields));
+            @endphp
+            @if(!empty($remainingData))
+                @foreach($remainingData as $key => $value)
+                    @if($key === 'section_data' && is_array($value))
+                        {{-- Handle section_data with proper question formatting --}}
+                        @if(!empty($value))
+                        
+                        {{-- Service-specific detailed questions --}}
+                        @if($service->service_type === 'lifting-examination')
+                            {{-- Lifting Examination Questions --}}
+                            <tr><td colspan="2" style="font-weight: bold; background-color: #f0f0f0; padding: 8px; text-align: center;">LIFTING EQUIPMENT EXAMINATION</td></tr>
+                            
+                            {{-- Inspector Assignment --}}
+                            @if(isset($value['lifting_examination_inspector']))
+                            <tr>
+                                <td class="label">Assigned Inspector:</td>
+                                <td>
+                                    @php $inspector = \App\Models\Personnel::find($value['lifting_examination_inspector']); @endphp
+                                    @if($inspector)
+                                        {{ $inspector->first_name }} {{ $inspector->last_name }} - {{ $inspector->job_title ?? 'Inspector' }}
+                                    @else
+                                        Inspector ID: {{ $value['lifting_examination_inspector'] }}
+                                    @endif
+                                </td>
+                            </tr>
+                            @endif
+                            
+                            {{-- Question A --}}
+                            <tr>
+                                <td class="label" style="vertical-align: top; font-weight: bold;">A. Is this the first thorough examination of lifting equipment after installation or after assembly at a new site or in a new location?</td>
+                                <td>
+                                    @if(isset($value['first_examination']))
+                                        <strong>{{ strtoupper($value['first_examination']) }}</strong>
+                                        @if($value['first_examination'] === 'yes' && isset($value['equipment_installation_details']))
+                                            <div style="margin-top: 5px; padding: 5px; background-color: #f9f9f9; border-left: 3px solid #007bff;">
+                                                <strong>Equipment Installation Details:</strong><br>
+                                                {{ $value['equipment_installation_details'] }}
+                                            </div>
+                                        @endif
+                                    @else
+                                        Not answered
+                                    @endif
+                                </td>
+                            </tr>
+                            
+                            {{-- Question B --}}
+                            <tr>
+                                <td class="label" style="vertical-align: top; font-weight: bold;">B. Is it the case that the equipment would be safe to operate?</td>
+                                <td>
+                                    @if(isset($value['safe_to_operate']))
+                                        <strong style="color: {{ $value['safe_to_operate'] === 'yes' ? '#28a745' : '#dc3545' }};">
+                                            {{ strtoupper($value['safe_to_operate']) }}
+                                        </strong>
+                                    @else
+                                        Not answered
+                                    @endif
+                                </td>
+                            </tr>
+                            
+                            {{-- Question C with sub-questions --}}
+                            <tr>
+                                <td class="label" style="vertical-align: top; font-weight: bold;">C. Does any part of the equipment have a defect which is or could become a danger to persons?</td>
+                                <td>
+                                    @if(isset($value['equipment_defect']))
+                                        <strong style="color: {{ $value['equipment_defect'] === 'no' ? '#28a745' : '#dc3545' }};">
+                                            {{ strtoupper($value['equipment_defect']) }}
+                                        </strong>
+                                        
+                                        {{-- Sub-questions for defects --}}
+                                        @if($value['equipment_defect'] === 'yes')
+                                            <div style="margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7;">
+                                                
+                                                {{-- Defect Description --}}
+                                                @if(isset($value['defect_description']) && !empty($value['defect_description']))
+                                                <div style="margin-bottom: 8px;">
+                                                    <strong>Identification and description of defect:</strong><br>
+                                                    <div style="padding: 5px; background-color: white; border: 1px solid #ddd; margin-top: 3px;">
+                                                        {{ $value['defect_description'] }}
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                
+                                                {{-- Existing Danger --}}
+                                                @if(isset($value['existing_danger']) && !empty($value['existing_danger']))
+                                                <div style="margin-bottom: 8px;">
+                                                    <strong>Is this an existing or imminent danger to persons?</strong><br>
+                                                    <div style="padding: 5px; background-color: white; border: 1px solid #ddd; margin-top: 3px;">
+                                                        {{ $value['existing_danger'] }}
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                
+                                                {{-- Potential Danger --}}
+                                                @if(isset($value['potential_danger']) && !empty($value['potential_danger']))
+                                                <div style="margin-bottom: 8px;">
+                                                    <strong>Is this a defect which is not yet, but could become a danger to persons?</strong><br>
+                                                    <div style="padding: 5px; background-color: white; border: 1px solid #ddd; margin-top: 3px;">
+                                                        {{ $value['potential_danger'] }}
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                
+                                                {{-- Defect Timeline --}}
+                                                @if(isset($value['defect_timeline']) && !empty($value['defect_timeline']))
+                                                <div style="margin-bottom: 8px;">
+                                                    <strong>If yes, state when:</strong><br>
+                                                    <div style="padding: 5px; background-color: #ffe6e6; border: 1px solid #ffcccc; margin-top: 3px; color: #d32f2f;">
+                                                        {{ date('d M Y', strtotime($value['defect_timeline'])) }}
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                
+                                                {{-- Repair Details --}}
+                                                @if(isset($value['repair_details']) && !empty($value['repair_details']))
+                                                <div style="margin-bottom: 8px;">
+                                                    <strong>Particulars of any repair, renewal or alteration required:</strong><br>
+                                                    <div style="padding: 5px; background-color: white; border: 1px solid #ddd; margin-top: 3px;">
+                                                        {{ $value['repair_details'] }}
+                                                    </div>
+                                                </div>
+                                                @endif
+                                                
+                                            </div>
+                                        @endif
+                                    @else
+                                        Not answered
+                                    @endif
+                                </td>
+                            </tr>
+                            
+                            {{-- Question D --}}
+                            @if(isset($value['test_details']) && !empty($value['test_details']))
+                            <tr>
+                                <td class="label" style="vertical-align: top; font-weight: bold;">D. Details of any tests carried out as part of the examination:</td>
+                                <td>
+                                    <div style="padding: 5px; background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                                        {{ $value['test_details'] }}
+                                    </div>
+                                </td>
+                            </tr>
+                            @endif
+                            
+                        @elseif($service->service_type === 'mpi-service')
+                            {{-- MPI Service Questions --}}
+                            <tr><td colspan="2" style="font-weight: bold; background-color: #f0f0f0; padding: 8px; text-align: center;">MAGNETIC PARTICLE INSPECTION (MPI)</td></tr>
+                            
+                            @foreach($value as $sectionKey => $sectionValue)
+                                @if(!empty($sectionValue) && $sectionValue !== '' && $sectionValue !== null)
+                                    <tr>
+                                        <td class="label">{{ ucwords(str_replace('_', ' ', $sectionKey)) }}:</td>
+                                        <td>
+                                            @if($sectionKey === 'mpi_service_inspector' && is_numeric($sectionValue))
+                                                @php $inspector = \App\Models\Personnel::find($sectionValue); @endphp
+                                                @if($inspector)
+                                                    {{ $inspector->first_name }} {{ $inspector->last_name }}
+                                                @else
+                                                    Inspector ID: {{ $sectionValue }}
+                                                @endif
+                                            @else
+                                                {{ ucfirst($sectionValue) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                            
+                        @elseif($service->service_type === 'visual-examination')
+                            {{-- Visual Examination Questions --}}
+                            <tr><td colspan="2" style="font-weight: bold; background-color: #f0f0f0; padding: 8px; text-align: center;">VISUAL EXAMINATION</td></tr>
+                            
+                            @foreach($value as $sectionKey => $sectionValue)
+                                @if(!empty($sectionValue) && $sectionValue !== '' && $sectionValue !== null)
+                                    <tr>
+                                        <td class="label">{{ ucwords(str_replace('_', ' ', $sectionKey)) }}:</td>
+                                        <td>
+                                            @if($sectionKey === 'visual_inspector' && is_numeric($sectionValue))
+                                                @php $inspector = \App\Models\Personnel::find($sectionValue); @endphp
+                                                @if($inspector)
+                                                    {{ $inspector->first_name }} {{ $inspector->last_name }}
+                                                @else
+                                                    Inspector ID: {{ $sectionValue }}
+                                                @endif
+                                            @else
+                                                {{ ucfirst($sectionValue) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                            
+                        @elseif($service->service_type === 'thorough-examination')
+                            {{-- Thorough Examination Questions --}}
+                            <tr><td colspan="2" style="font-weight: bold; background-color: #f0f0f0; padding: 8px; text-align: center;">THOROUGH EXAMINATION</td></tr>
+                            
+                            @foreach($value as $sectionKey => $sectionValue)
+                                @if(!empty($sectionValue) && $sectionValue !== '' && $sectionValue !== null)
+                                    <tr>
+                                        <td class="label">{{ ucwords(str_replace('_', ' ', $sectionKey)) }}:</td>
+                                        <td>
+                                            @if($sectionKey === 'thorough_examination_inspector' && is_numeric($sectionValue))
+                                                @php $inspector = \App\Models\Personnel::find($sectionValue); @endphp
+                                                @if($inspector)
+                                                    {{ $inspector->first_name }} {{ $inspector->last_name }}
+                                                @else
+                                                    Inspector ID: {{ $sectionValue }}
+                                                @endif
+                                            @else
+                                                {{ ucfirst($sectionValue) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                            
+                        @else
+                            {{-- Generic service data display --}}
+                            @foreach($value as $sectionKey => $sectionValue)
+                                @if(!empty($sectionValue) && $sectionValue !== '' && $sectionValue !== null)
+                                    <tr>
+                                        <td class="label">{{ ucwords(str_replace('_', ' ', $sectionKey)) }}:</td>
+                                        <td>{{ ucfirst($sectionValue) }}</td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        @endif
+                        
+                        @endif
+                    @elseif($key === 'form_fields' && is_array($value))
+                        {{-- Show form_fields if section_data is not available --}}
+                        @if(!isset($remainingData['section_data']) && !empty($value))
+                        <tr>
+                            <td class="label">Form Data:</td>
+                            <td>
+                                @foreach($value as $fieldKey => $fieldValue)
+                                    @if(!empty($fieldValue) && $fieldValue !== '' && $fieldValue !== null)
+                                        <div style="margin-bottom: 3px;">
+                                            <strong>{{ ucwords(str_replace('_', ' ', $fieldKey)) }}:</strong>
+                                            @if(str_ends_with($fieldKey, '_inspector') && is_numeric($fieldValue))
+                                                @php $inspector = \App\Models\Personnel::find($fieldValue); @endphp
+                                                @if($inspector)
+                                                    {{ $inspector->first_name }} {{ $inspector->last_name }}
+                                                @else
+                                                    Inspector ID: {{ $fieldValue }}
+                                                @endif
+                                            @else
+                                                {{ ucfirst($fieldValue) }}
+                                            @endif
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </td>
+                        </tr>
+                        @endif
+                    @elseif(!is_array($value) && !empty($value))
+                        <tr>
+                            <td class="label">{{ ucwords(str_replace('_', ' ', $key)) }}:</td>
+                            <td>{{ $value }}</td>
+                        </tr>
+                    @endif
+                @endforeach
             @endif
             
             {{-- Show results if any --}}
@@ -470,23 +958,27 @@
     
     <!-- Equipment Section -->
     @if($inspection->equipmentAssignments && $inspection->equipmentAssignments->count() > 0)
-    <div class="section-header">EQUIPMENT</div>
+    <div class="section-header">EQUIPMENT ASSIGNMENTS</div>
     <table class="equipment-table">
         <thead>
             <tr>
+                <th>Equipment Name</th>
                 <th>Type</th>
-                <th>Description</th>
-                <th>Next Certification Date</th>
-                <th>Services</th>
+                <th>Brand/Model</th>
+                <th>Serial Number</th>
+                <th>Calibration Due</th>
+                <th>Condition</th>
             </tr>
         </thead>
         <tbody>
             @foreach($inspection->equipmentAssignments as $assignment)
             <tr>
-                <td>{{ $assignment->equipment->type ?? $assignment->equipment_type ?? 'N/A' }}</td>
                 <td>{{ $assignment->equipment->description ?? $assignment->equipment_name ?? 'N/A' }}</td>
-                <td>{{ $assignment->equipment && $assignment->equipment->next_certification_date ? date('d-M-Y', strtotime($assignment->equipment->next_certification_date)) : 'N/A' }}</td>
-                <td>{{ is_array($assignment->assigned_services) ? implode(', ', $assignment->assigned_services) : ($assignment->assigned_services ?? 'N/A') }}</td>
+                <td>{{ $assignment->equipment->type ?? $assignment->equipment_type ?? 'N/A' }}</td>
+                <td>{{ $assignment->equipment->brand ?? $assignment->brand_model ?? 'N/A' }}</td>
+                <td>{{ $assignment->equipment->serial_number ?? $assignment->serial_number ?? 'N/A' }}</td>
+                <td>{{ $assignment->equipment && $assignment->equipment->next_certification_date ? date('d-M-Y', strtotime($assignment->equipment->next_certification_date)) : ($assignment->calibration_due ? $assignment->calibration_due->format('d-M-Y') : 'N/A') }}</td>
+                <td>{{ $assignment->condition ?? 'Good' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -499,23 +991,27 @@
     <table class="equipment-table">
         <thead>
             <tr>
+                <th>Consumable</th>
                 <th>Type</th>
                 <th>Manufacturer</th>
-                <th>Description</th>
                 <th>Batch Number</th>
+                <th>Quantity</th>
+                <th>Cost</th>
                 <th>Expiry Date</th>
-                <th>Services</th>
+                <th>Condition</th>
             </tr>
         </thead>
         <tbody>
             @foreach($inspection->consumableAssignments as $assignment)
             <tr>
+                <td>{{ $assignment->consumable->description ?? $assignment->consumable_name ?? 'N/A' }}</td>
                 <td>{{ $assignment->consumable->type ?? $assignment->consumable_type ?? 'N/A' }}</td>
                 <td>{{ $assignment->consumable->manufacturer ?? $assignment->brand_manufacturer ?? 'N/A' }}</td>
-                <td>{{ $assignment->consumable->description ?? $assignment->consumable_name ?? 'N/A' }}</td>
                 <td>{{ $assignment->consumable->batch_number ?? $assignment->batch_lot_number ?? 'N/A' }}</td>
+                <td>{{ $assignment->quantity_used ? $assignment->quantity_used . ' ' . $assignment->unit : 'N/A' }}</td>
+                <td>{{ $assignment->total_cost ? '$' . number_format($assignment->total_cost, 2) : 'N/A' }}</td>
                 <td>{{ $assignment->consumable && $assignment->consumable->expiry_date ? date('d-M-Y', strtotime($assignment->consumable->expiry_date)) : ($assignment->expiry_date ? date('d-M-Y', strtotime($assignment->expiry_date)) : 'N/A') }}</td>
-                <td>{{ is_array($assignment->assigned_services) ? implode(', ', $assignment->assigned_services) : ($assignment->assigned_services ?? 'N/A') }}</td>
+                <td>{{ $assignment->condition ?? 'Good' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -524,14 +1020,16 @@
     
     <!-- Personnel Section -->
     @if($inspection->personnelAssignments && $inspection->personnelAssignments->count() > 0)
-    <div class="section-header">PERSONNEL</div>
+    <div class="section-header">PERSONNEL ASSIGNMENTS</div>
     <table class="equipment-table">
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Position</th>
-                <th>Qualification</th>
-                <th>Services</th>
+                <th>Role/Position</th>
+                <th>Certification</th>
+                <th>Cert. Number</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
@@ -540,10 +1038,57 @@
                 <td>{{ $assignment->personnel ? ($assignment->personnel->first_name . ' ' . $assignment->personnel->last_name) : $assignment->personnel_name ?? 'N/A' }}</td>
                 <td>{{ $assignment->personnel->position ?? $assignment->role_position ?? 'N/A' }}</td>
                 <td>{{ $assignment->personnel->qualification ?? $assignment->certification_level ?? 'N/A' }}</td>
-                <td>{{ is_array($assignment->assigned_services) ? implode(', ', $assignment->assigned_services) : ($assignment->assigned_services ?? 'N/A') }}</td>
+                <td>{{ $assignment->certification_number ?? 'N/A' }}</td>
+                <td>{{ $assignment->certification_expiry ? $assignment->certification_expiry->format('d-M-Y') : 'N/A' }}</td>
+                <td>{{ $assignment->status ?? 'Active' }}</td>
             </tr>
             @endforeach
         </tbody>
+    </table>
+    @endif
+    
+    <!-- Inspection Results & Comments Section -->
+    @if($inspection->inspector_comments || $inspection->defects_found || $inspection->recommendations || $inspection->overall_result || $inspection->next_inspection_date)
+    <div class="section-header">INSPECTION RESULTS & COMMENTS</div>
+    <table class="details-table">
+        @if($inspection->inspector_comments)
+        <tr>
+            <td class="label" style="width: 25%;">Inspector Comments:</td>
+            <td>{{ $inspection->inspector_comments }}</td>
+        </tr>
+        @endif
+        @if($inspection->defects_found)
+        <tr>
+            <td class="label">Defects Found:</td>
+            <td>{{ $inspection->defects_found }}</td>
+        </tr>
+        @endif
+        @if($inspection->recommendations)
+        <tr>
+            <td class="label">Recommendations:</td>
+            <td>{{ $inspection->recommendations }}</td>
+        </tr>
+        @endif
+        @if($inspection->overall_result)
+        <tr>
+            <td class="label">Overall Result:</td>
+            <td style="font-weight: bold; color: {{ $inspection->overall_result === 'pass' ? '#28a745' : ($inspection->overall_result === 'fail' ? '#dc3545' : '#fd7e14') }};">
+                {{ strtoupper($inspection->overall_result) }}
+            </td>
+        </tr>
+        @endif
+        @if($inspection->next_inspection_date)
+        <tr>
+            <td class="label">Next Inspection Date:</td>
+            <td>{{ Carbon\Carbon::parse($inspection->next_inspection_date)->format('d-M-Y') }}</td>
+        </tr>
+        @endif
+        @if($inspection->limitations)
+        <tr>
+            <td class="label">Limitations:</td>
+            <td>{{ $inspection->limitations }}</td>
+        </tr>
+        @endif
     </table>
     @endif
     

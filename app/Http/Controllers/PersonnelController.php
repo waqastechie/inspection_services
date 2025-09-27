@@ -36,7 +36,7 @@ class PersonnelController extends Controller
             'last_name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
             'department' => 'required|string|max:255',
-            'employee_id' => 'nullable|string|max:100|unique:personnel,employee_id',
+            'employee_id' => 'nullable|string|max:100|unique:personnels,employee_id',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'supervisor' => 'nullable|string|max:255',
@@ -86,7 +86,7 @@ class PersonnelController extends Controller
             'last_name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
             'department' => 'required|string|max:255',
-            'employee_id' => 'nullable|string|max:100|unique:personnel,employee_id,' . $personnel->id,
+            'employee_id' => 'nullable|string|max:100|unique:personnels,employee_id,' . $personnel->id,
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'supervisor' => 'nullable|string|max:255',
@@ -149,6 +149,9 @@ class PersonnelController extends Controller
 
         $personnel = $query->get(['id', 'first_name', 'last_name', 'position', 'department', 'email', 'phone']);
 
-        return response()->json($personnel);
+        return response()->json([
+            'success' => true,
+            'personnel' => $personnel
+        ]);
     }
 }

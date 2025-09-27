@@ -25,7 +25,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h6 class="card-title">Total Reports</h6>
-                                    <h2 class="mb-0">{{ $inspections->total() }}</h2>
+                                    <h2 class="mb-0">{{ $inspections->count() }}</h2>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
@@ -92,14 +92,13 @@
                 <div class="card-body">
                     @if($inspections->count() > 0)
                         <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
+                            <table id="inspectionsTable" class="table table-hover table-striped">
+                                <thead class="table-dark">
                                     <tr>
-                                        <th>Inspection #</th>
+                                        <th>Report #</th>
+                                        <th>Serial #</th>
                                         <th>Client</th>
                                         <th>Project</th>
-                                        <th>Location</th>
-                                        <th>Equipment</th>
                                         <th>Date</th>
                                         <th>Inspector</th>
                                         <th>Status</th>
@@ -107,22 +106,20 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($inspections as $inspection)
+                                    @foreach($inspections as $index => $inspection)
                                         <tr>
                                             <td>
                                                 <strong class="text-primary">{{ $inspection->inspection_number }}</strong>
                                             </td>
-                                            <td>{{ $inspection->client_name }}</td>
-                                            <td>{{ $inspection->project_name }}</td>
                                             <td>
-                                                <small>{{ $inspection->location }}</small>
-                                            </td>
-                                            <td>
-                                                <div>{{ $inspection->equipment_type }}</div>
-                                                @if($inspection->equipment_description)
-                                                    <small class="text-muted">{{ Str::limit($inspection->equipment_description, 40) }}</small>
+                                                @if($inspection->serial_number)
+                                                    <span class="badge bg-secondary">{{ $inspection->serial_number }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
                                                 @endif
                                             </td>
+                                            <td>{{ $inspection->client?->client_name ?? 'N/A' }}</td>
+                                            <td>{{ $inspection->project_name ?: 'N/A' }}</td>
                                             <td>{{ $inspection->inspection_date->format('d/m/Y') }}</td>
                                             <td>{{ $inspection->lead_inspector_name }}</td>
                                             <td>
@@ -142,6 +139,16 @@
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                     @endif
+                                                    @if($inspection->status == 'qa' && auth()->user()->isSuperAdmin())
+                                                        <form method="POST" action="{{ route('inspections.complete', $inspection->id) }}" style="display: inline;">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <button type="submit" class="btn btn-outline-info" title="Mark as Completed" 
+                                                                    onclick="return confirm('Mark this inspection as completed?')">
+                                                                <i class="fas fa-check-circle"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
                                                     <a href="{{ route('inspections.pdf', $inspection->id) }}" 
                                                        class="btn btn-outline-success" title="Download PDF">
                                                         <i class="fas fa-file-pdf"></i>
@@ -153,9 +160,18 @@
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     @endif
-                                                    <button class="btn btn-outline-secondary" title="Duplicate">
-                                                        <i class="fas fa-copy"></i>
-                                                    </button>
+
+                                                    <!-- QA Review Button and Status Badge for QA Users -->
+                                                    @if(auth()->user()->canApproveInspections() && ($inspection->qa_status === 'pending_qa' || $inspection->qa_status === 'under_qa_review'))
+                                                        <a href="{{ route('qa.review', $inspection) }}" class="btn btn-warning" title="QA Review">
+                                                            <i class="fas fa-shield-check"></i>
+                                                        </a>
+                                                    @endif
+                                                    @if(auth()->user()->canApproveInspections() && $inspection->qa_status)
+                                                        <span class="badge bg-{{ $inspection->qa_status_color }}" title="QA Status">
+                                                            <i class="fas fa-shield-check me-1"></i>{{ $inspection->qa_status_name }}
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -164,12 +180,7 @@
                             </table>
                         </div>
 
-                        <!-- Pagination -->
-                        @if($inspections->hasPages())
-                            <div class="d-flex justify-content-center mt-4">
-                                {{ $inspections->links() }}
-                            </div>
-                        @endif
+                        <!-- DataTables will handle pagination automatically -->
                     @else
                         <div class="alert alert-info">
                             <div class="d-flex align-items-center">
@@ -243,5 +254,35 @@ function confirmDelete(inspectionId, inspectionNumber) {
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
 }
+
+// Initialize DataTable
+$(document).ready(function() {
+    $('#inspectionsTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[0, 'desc']], // Sort by Report # column descending
+        language: {
+            search: "Search reports:",
+            lengthMenu: "Show _MENU_ reports per page",
+            info: "Showing _START_ to _END_ of _TOTAL_ reports",
+            paginate: {
+                first: '<i class="fas fa-angle-double-left"></i>',
+                previous: '<i class="fas fa-angle-left"></i>',
+                next: '<i class="fas fa-angle-right"></i>',
+                last: '<i class="fas fa-angle-double-right"></i>'
+            }
+        },
+        columnDefs: [
+            { orderable: false, targets: [7] }, // Disable sorting on Actions column
+            { searchable: false, targets: [7] }, // Disable search on Actions column
+            { className: "text-center", targets: [6, 7] }, // Center align for Status, Actions
+            { width: "20%", targets: 7 } // Set width for actions column
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        autoWidth: false
+    });
+});
 </script>
 @endpush

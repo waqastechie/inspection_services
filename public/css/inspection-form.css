@@ -388,3 +388,20 @@
 .border-white-25 {
     border-color: rgba(255, 255, 255, 0.25) !important;
 }
+
+/* --- Modal flicker guard -------------------------------------------------
+   Prevent hover transforms inside Bootstrap modals. When elements move on
+   hover (e.g., cards/buttons translating on Y), the mouse can repeatedly
+   enter/leave the hover area causing visible flicker. Keep content static
+   inside modals and prefer shadow-only feedback. */
+.modal .card,
+.modal .card:hover,
+.modal .btn:hover,
+.modal .page-link:hover {
+    transform: none !important;
+}
+
+.modal .card:hover {
+    /* Allow shadow change without position shift */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}

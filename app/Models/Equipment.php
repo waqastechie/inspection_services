@@ -14,6 +14,7 @@ class Equipment extends Model
     protected $fillable = [
         'name',
         'type',
+        'equipment_type_id',
         'brand_model',
         'serial_number',
         'calibration_date',
@@ -131,6 +132,14 @@ class Equipment extends Model
     public function parentEquipment()
     {
         return $this->belongsTo(Equipment::class, 'parent_equipment_id');
+    }
+
+    /**
+     * Get the equipment type that this equipment belongs to
+     */
+    public function equipmentType()
+    {
+        return $this->belongsTo(EquipmentType::class);
     }
 
     /**

@@ -143,9 +143,17 @@
                                     <strong>Admin:</strong><br>
                                     <small>admin@company.com / password</small>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-12 mb-2">
                                     <strong>Inspector:</strong><br>
                                     <small>inspector@company.com / password</small>
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <strong>QA:</strong><br>
+                                    <small>qa@inspection.com / password</small>
+                                </div>
+                                <div class="col-12">
+                                    <strong>Client:</strong><br>
+                                    <small>client@inspection.com / password</small>
                                 </div>
                             </div>
                         </div>

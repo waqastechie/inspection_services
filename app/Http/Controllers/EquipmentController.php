@@ -183,7 +183,7 @@ class EquipmentController extends Controller
             'swl',
             'reason_for_examination'
         ]);
-
+        
         // Transform the data to match the expected format
         $transformedEquipment = $equipment->map(function($item) {
             $display_name = $item->name;
@@ -193,15 +193,19 @@ class EquipmentController extends Controller
             
             return [
                 'id' => $item->id,
+                'name' => $display_name,
                 'equipment_name' => $display_name,
                 'equipment_type' => $item->type,
+                'type' => $item->type,
                 'brand_model' => $item->brand_model,
                 'serial_number' => $item->serial_number,
                 'condition' => $item->condition,
                 'calibration_date' => $item->calibration_date ? $item->calibration_date->format('Y-m-d') : null,
                 'calibration_due' => $item->calibration_due ? $item->calibration_due->format('Y-m-d') : null,
+                'last_calibration' => $item->calibration_date ? $item->calibration_date->format('Y-m-d') : null,
                 'calibration_certificate' => $item->calibration_certificate,
                 'maintenance_notes' => $item->maintenance_notes,
+                'notes' => $item->maintenance_notes,
                 'equipment_category' => $item->equipment_category,
                 'swl' => $item->swl,
                 'reason_for_examination' => $item->reason_for_examination,
@@ -209,7 +213,10 @@ class EquipmentController extends Controller
             ];
         });
 
-        return response()->json($transformedEquipment);
+        return response()->json([
+            'success' => true,
+            'equipment' => $transformedEquipment
+        ]);
     }
 
     /**

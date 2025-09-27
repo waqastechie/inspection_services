@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inspection extends Model
 {
@@ -13,7 +12,7 @@ class Inspection extends Model
     protected $fillable = [
         // Basic Information
         'inspection_number',
-        'client_name',
+        'client_id',
         'project_name',
         'location',
         'area_of_examination',
@@ -32,6 +31,9 @@ class Inspection extends Model
         'weather_conditions',
         'temperature',
         'humidity',
+        'rig',
+        'report_number',
+        'revision',
         
         // Equipment Under Test
         'equipment_type',
@@ -79,6 +81,18 @@ class Inspection extends Model
         'attachments',
         'inspection_images',
         'status',
+        
+        // QA Workflow fields
+        'qa_status',
+        'qa_reviewer_id',
+        'qa_reviewed_at',
+        'qa_comments',
+        'qa_rejection_reason',
+        
+        // Completion tracking - temporarily disabled
+        // 'created_by',
+        // 'completed_at', 
+        // 'completed_by',
     ];
 
     protected $casts = [
@@ -87,6 +101,7 @@ class Inspection extends Model
         'next_inspection_due' => 'date',
         'next_inspection_date' => 'date',
         'report_date' => 'date',
+        'completed_at' => 'datetime',
         'inspection_images' => 'array',
         'attachments' => 'array',
         'service_notes' => 'array',
@@ -137,15 +152,47 @@ class Inspection extends Model
     /**
      * Get the services for the inspection.
      */
-    public function services(): HasMany
+    public function services()
     {
-        return $this->hasMany(InspectionService::class);
+        // Prefer the dedicated 'services' table/model if present, otherwise fallback
+        try {
+            if (\Schema::hasTable('services')) {
+                return $this->hasMany(Service::class, 'inspection_id');
+            }
+        } catch (\Throwable $e) {
+            // ignore and fallback
+        }
+        return $this->hasMany(InspectionService::class, 'inspection_id');
+    }
+
+    /**
+     * Get the lifting examination data for this inspection.
+     */
+    public function liftingExamination()
+    {
+        return $this->hasOne(LiftingExamination::class);
+    }
+
+    /**
+     * Get the MPI inspection data for this inspection.
+     */
+    public function mpiInspection()
+    {
+        return $this->hasOne(MpiInspection::class);
+    }
+
+    /**
+     * Get the QA reviewer for this inspection.
+     */
+    public function qaReviewer()
+    {
+        return $this->belongsTo(User::class, 'qa_reviewer_id');
     }
 
     /**
      * Get the personnel assignments for the inspection.
      */
-    public function personnelAssignments(): HasMany
+    public function personnelAssignments()
     {
         return $this->hasMany(PersonnelAssignment::class);
     }
@@ -153,23 +200,39 @@ class Inspection extends Model
     /**
      * Get the equipment assignments for the inspection.
      */
-    public function equipmentAssignments(): HasMany
+    public function equipmentAssignments()
     {
         return $this->hasMany(EquipmentAssignment::class);
     }
 
     /**
+     * Get the inspection equipment for the inspection (Step 4 data).
+     */
+    public function inspectionEquipment()
+    {
+        return $this->hasMany(InspectionEquipment::class);
+    }
+
+    /**
      * Get the consumable assignments for the inspection.
      */
-    public function consumableAssignments(): HasMany
+    public function consumableAssignments()
     {
         return $this->hasMany(ConsumableAssignment::class);
     }
 
     /**
+     * Get the equipment based on equipment_type field (if it's an ID).
+     */
+    public function equipmentType()
+    {
+        return $this->belongsTo(Equipment::class, 'equipment_type');
+    }
+
+    /**
      * Get the inspection results for the inspection.
      */
-    public function inspectionResults(): HasMany
+    public function inspectionResults()
     {
         return $this->hasMany(InspectionResult::class);
     }
@@ -218,6 +281,14 @@ class Inspection extends Model
     }
 
     /**
+     * Get the client for this inspection
+     */
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
      * Get the lifting examination inspector
      */
     public function liftingExaminationInspector()
@@ -256,4 +327,230 @@ class Inspection extends Model
     {
         return $this->belongsTo(Personnel::class, 'visual_inspector');
     }
+
+    /**
+     * EMERGENCY FIX: Completely removed images functionality
+     * This method is temporarily disabled to prevent relationship errors
+     */
+    // public function images() - DISABLED
+
+    /**
+     * EMERGENCY FIX: Completely removed images_for_edit functionality  
+     * This attribute is temporarily disabled to prevent relationship errors
+     */
+    // public function getImagesForEditAttribute() - DISABLED
+    
+    /**
+     * Get all images for this inspection
+     */
+    public function images()
+    {
+        try {
+            if (!\Schema::hasTable('inspection_images')) {
+                return new \Illuminate\Support\Collection();
+            }
+            return $this->hasMany(InspectionImage::class)->ordered();
+        } catch (\Exception $e) {
+            return new \Illuminate\Support\Collection();
+        }
+    }
+
+    /**
+     * Get images formatted for edit interface
+     */
+    public function getImagesForEditAttribute()
+    {
+        try {
+            if (!\Schema::hasTable('inspection_images')) {
+                return new \Illuminate\Support\Collection();
+            }
+            
+            $images = $this->images;
+            if ($images instanceof \Illuminate\Database\Eloquent\Collection) {
+                return $images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'original_name' => $image->original_name,
+                        'file_path' => $image->file_path,
+                        'caption' => $image->caption,
+                        'file_size' => $image->file_size,
+                        'formatted_size' => $image->formatted_size,
+                        'url' => $image->url
+                    ];
+                });
+            }
+            return new \Illuminate\Support\Collection();
+        } catch (\Exception $e) {
+            return new \Illuminate\Support\Collection();
+        }
+    }
+
+    /**
+     * Get the user who created this inspection
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the user who completed this inspection
+     */
+    public function completedBy()
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    // QA Workflow Methods
+    
+    /**
+     * Submit inspection for QA review
+     */
+    public function submitForQA()
+    {
+        $this->update([
+            'status' => 'submitted_for_qa',
+            'qa_status' => 'pending_qa'
+        ]);
+    }
+
+    /**
+     * Assign QA reviewer and start review
+     */
+    public function startQAReview(User $qaReviewer)
+    {
+        $this->update([
+            'status' => 'under_qa_review',
+            'qa_status' => 'under_qa_review',
+            'qa_reviewer_id' => $qaReviewer->id
+        ]);
+    }
+
+    /**
+     * Approve inspection after QA review
+     */
+    public function approveQA(User $qaReviewer, string $comments = null)
+    {
+        $this->update([
+            'status' => 'qa_approved',
+            'qa_status' => 'qa_approved',
+            'qa_reviewer_id' => $qaReviewer->id,
+            'qa_reviewed_at' => now(),
+            'qa_comments' => $comments
+        ]);
+    }
+
+    /**
+     * Reject inspection after QA review
+     */
+    public function rejectQA(User $qaReviewer, string $reason, string $comments = null)
+    {
+        $this->update([
+            'status' => 'qa_rejected',
+            'qa_status' => 'qa_rejected',
+            'qa_reviewer_id' => $qaReviewer->id,
+            'qa_reviewed_at' => now(),
+            'qa_rejection_reason' => $reason,
+            'qa_comments' => $comments
+        ]);
+    }
+
+    /**
+     * Mark inspection as requiring revision
+     */
+    public function requireRevision(User $qaReviewer, string $reason, string $comments = null)
+    {
+        $this->update([
+            'status' => 'revision_required',
+            'qa_status' => 'revision_required',
+            'qa_reviewer_id' => $qaReviewer->id,
+            'qa_reviewed_at' => now(),
+            'qa_rejection_reason' => $reason,
+            'qa_comments' => $comments
+        ]);
+    }
+
+    /**
+     * Complete inspection (after QA approval)
+     */
+    public function markAsCompleted(User $user = null)
+    {
+        $this->update([
+            'status' => 'completed',
+            'completed_by' => $user ? $user->id : auth()->id(),
+            'completed_at' => now()
+        ]);
+    }
+
+    /**
+     * Check if inspection is pending QA review
+     */
+    public function isPendingQA(): bool
+    {
+        return $this->qa_status === 'pending_qa';
+    }
+
+    /**
+     * Check if inspection is under QA review
+     */
+    public function isUnderQAReview(): bool
+    {
+        return $this->qa_status === 'under_qa_review';
+    }
+
+    /**
+     * Check if inspection is QA approved
+     */
+    public function isQAApproved(): bool
+    {
+        return $this->qa_status === 'qa_approved';
+    }
+
+    /**
+     * Check if inspection is QA rejected
+     */
+    public function isQARejeected(): bool
+    {
+        return $this->qa_status === 'qa_rejected';
+    }
+
+    /**
+     * Check if inspection requires revision
+     */
+    public function requiresRevision(): bool
+    {
+        return $this->qa_status === 'revision_required';
+    }
+
+    /**
+     * Get QA status badge color
+     */
+    public function getQAStatusColorAttribute(): string
+    {
+        return match($this->qa_status) {
+            'pending_qa' => 'warning',
+            'under_qa_review' => 'info',
+            'qa_approved' => 'success',
+            'qa_rejected' => 'danger',
+            'revision_required' => 'secondary',
+            default => 'light'
+        };
+    }
+
+    /**
+     * Get QA status display name
+     */
+    public function getQAStatusNameAttribute(): string
+    {
+        return match($this->qa_status) {
+            'pending_qa' => 'Pending QA Review',
+            'under_qa_review' => 'Under QA Review',
+            'qa_approved' => 'QA Approved',
+            'qa_rejected' => 'QA Rejected',
+            'revision_required' => 'Revision Required',
+            default => 'Unknown'
+        };
+    }
+
+    // NO OTHER IMAGE METHODS - KEEPING IT SIMPLE
 }

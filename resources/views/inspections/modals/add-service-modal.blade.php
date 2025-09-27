@@ -152,6 +152,9 @@ function addServiceToForm(serviceType) {
     
     selectedServicesContainer.appendChild(serviceBadge);
     
+    // Show the corresponding service form
+    showServiceForm(serviceType);
+    
     // Update hidden input
     updateSelectedServicesInput();
     
@@ -183,6 +186,11 @@ function removeService(serviceType) {
     const badge = document.querySelector(`.service-badge[data-service="${serviceType}"]`);
     if (badge) {
         badge.remove();
+        // Hide the corresponding service form
+        const formElement = document.getElementById(`${serviceType}-service-form`);
+        if (formElement) {
+            formElement.style.display = 'none';
+        }
         updateSelectedServicesInput();
         showToast('Service removed', 'info');
     }

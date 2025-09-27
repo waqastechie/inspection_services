@@ -16,53 +16,7 @@
                     <form action="{{ route('admin.equipment.store') }}" method="POST">
                         @csrf
                         
-                        <div class="row">
-                            <!-- Equipment Category -->
-                            <div class="col-12 mb-4">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white">
-                                        <h5 class="mb-0">Equipment Category</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="equipment_category" id="category_asset" value="asset" {{ old('equipment_category', 'asset') === 'asset' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="category_asset">
-                                                        <i class="fas fa-box text-primary"></i> <strong>Asset</strong>
-                                                        <small class="d-block text-muted">Main equipment piece (e.g., Gas Rack, Crane)</small>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="equipment_category" id="category_item" value="item" {{ old('equipment_category') === 'item' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="category_item">
-                                                        <i class="fas fa-cog text-info"></i> <strong>Item/Component</strong>
-                                                        <small class="d-block text-muted">Part of an asset (e.g., Wire Rope, Safety Pin)</small>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div id="parent_equipment_section" class="mt-3" style="display: none;">
-                                            <label for="parent_equipment_id" class="form-label">Parent Asset *</label>
-                                            <select class="form-select @error('parent_equipment_id') is-invalid @enderror" id="parent_equipment_id" name="parent_equipment_id">
-                                                <option value="">Select Parent Asset</option>
-                                                @foreach(\App\Models\Equipment::assets()->get() as $asset)
-                                                    <option value="{{ $asset->id }}" {{ old('parent_equipment_id') == $asset->id ? 'selected' : '' }}>
-                                                        {{ $asset->name }} ({{ $asset->serial_number }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('parent_equipment_id')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <div class="row">
                             <!-- Basic Information -->
@@ -290,18 +244,6 @@
                         <div id="asset_fields" class="row mt-4">
                             <div class="col-12">
                                 <h5 class="mb-3"><i class="fas fa-clipboard-list text-primary"></i> Asset Information</h5>
-                            </div>
-                            
-                            <div class="col-12">
-                                <div class="mb-3">
-                                    <label for="reason_for_examination" class="form-label">Reason for Examination</label>
-                                    <textarea class="form-control @error('reason_for_examination') is-invalid @enderror" 
-                                              id="reason_for_examination" name="reason_for_examination" rows="2"
-                                              placeholder="e.g., A: New Installation, B: 6 Monthly, C: 12 Monthly, D: Written Scheme, E: Exceptional Circumstances">{{ old('reason_for_examination') }}</textarea>
-                                    @error('reason_for_examination')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
                             </div>
                         </div>
 

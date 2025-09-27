@@ -25,24 +25,10 @@ let equipmentData = [];
 let consumableData = [];
 let selectedServices = [];
 
-// Auto-save and draft management variables
-let autoSaveTimeout;
-let localStorageTimeout;
+// Draft management variables
 let lastSaveTime = null;
 let currentDraftId = null;
 let isSubmitted = false;
-
-// Local storage keys
-const LOCAL_STORAGE_KEYS = {
-    FORM_DATA: "inspection_form_data",
-    SELECTED_SERVICES: "inspection_selected_services",
-    PERSONNEL_ASSIGNMENTS: "inspection_personnel_assignments",
-    EQUIPMENT_ASSIGNMENTS: "inspection_equipment_assignments",
-    CONSUMABLE_ASSIGNMENTS: "inspection_consumable_assignments",
-    IMAGES: "inspection_images",
-    TIMESTAMP: "inspection_last_save",
-    DRAFT_ID: "inspection_draft_id",
-};
 
 // Initialize form when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
@@ -121,9 +107,6 @@ function initializeForm() {
     if (inspectionDateTime && !inspectionDateTime.value) {
         inspectionDateTime.value = dateTimeString;
     }
-
-    // Initialize auto-save functionality
-    initializeAutoSave();
 
     // Initialize summary updates
     updateReportSummary();
@@ -733,6 +716,35 @@ function initializeAutoSave() {
             console.log("Form method:", form.method);
 
             try {
+                // Check authentication status first
+                const authCheck = await fetch("/inspections/debug-auth", {
+                    method: "GET",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN":
+                            document
+                                .querySelector('meta[name="csrf-token"]')
+                                ?.getAttribute("content") || "",
+                    },
+                });
+
+                if (authCheck.ok) {
+                    const authData = await authCheck.json();
+                    console.log("Authentication status:", authData);
+
+                    if (!authData.authenticated) {
+                        showErrorMessage(
+                            "You must be logged in to submit inspections. Redirecting to login..."
+                        );
+                        setTimeout(() => {
+                            window.location.href = "/login";
+                        }, 2000);
+                        return;
+                    }
+                } else {
+                    console.warn("Could not verify authentication status");
+                }
+
                 // Show loading state immediately
                 showSubmissionLoader();
 
@@ -777,8 +789,25 @@ function initializeAutoSave() {
                 // Prepare form data
                 const formData = new FormData(form);
 
+                console.log("=== FORM DATA BEFORE DYNAMIC ADDITIONS ===");
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}:`, value);
+                }
+
                 // Add any additional data from modals/dynamic sections
                 addDynamicDataToFormData(formData);
+
+                console.log("=== FORM DATA AFTER DYNAMIC ADDITIONS ===");
+                for (let [key, value] of formData.entries()) {
+                    if (
+                        key.includes("service") ||
+                        key.includes("personnel") ||
+                        key.includes("equipment") ||
+                        key.includes("consumable")
+                    ) {
+                        console.log(`${key}:`, value);
+                    }
+                }
 
                 // Submit form via AJAX
                 const response = await fetch(form.action, {
@@ -813,7 +842,14 @@ function initializeAutoSave() {
                             isSubmitted = true;
                             clearLocalStorage();
 
-                            // Redirect after a short delay
+                            // 🔍 DEBUG: Temporarily disable redirect to see console
+                            alert(
+                                "SUCCESS! Check console for debug info. Form submission completed."
+                            );
+                            console.log("🔍 REDIRECT DISABLED FOR DEBUGGING");
+
+                            // Redirect after a short delay (DISABLED FOR DEBUGGING)
+                            /*
                             setTimeout(() => {
                                 if (result.redirect_url) {
                                     window.location.href = result.redirect_url;
@@ -821,6 +857,7 @@ function initializeAutoSave() {
                                     window.location.href = "/inspections";
                                 }
                             }, 2000);
+                            */
                         } else {
                             throw new Error(
                                 result.message || "Submission failed"
@@ -3393,19 +3430,64 @@ function getAllUploadedImages() {
     return window.uploadedImages || [];
 }
 
-// Get all service sections data (MPI, etc.)
+// Get all service sections data (MPI, Lifting Examination, etc.)
 function getAllServiceSectionsData() {
     const serviceSectionsData = {};
 
-    // Collect MPI data if available
-    const mpiData = document.getElementById("mpiDataContainer");
-    if (mpiData) {
-        serviceSectionsData.mpi = collectMpiData();
+    // Check which services are selected and collect their data
+    if (selectedServices && selectedServices.length > 0) {
+        selectedServices.forEach((service) => {
+            const serviceType = service.type;
+            const sectionId = `section-${serviceType}`;
+            const section = document.getElementById(sectionId);
+
+            if (section && section.style.display !== "none") {
+                console.log(`Collecting data for service: ${serviceType}`);
+
+                // Collect data based on service type
+                if (serviceType === "mpi-service") {
+                    serviceSectionsData.mpi = collectMpiData();
+                    console.log("Collected MPI data:", serviceSectionsData.mpi);
+                } else if (serviceType === "lifting-examination") {
+                    serviceSectionsData["lifting-examination"] =
+                        collectLiftingExaminationData();
+                    console.log(
+                        "Collected Lifting Examination data:",
+                        serviceSectionsData["lifting-examination"]
+                    );
+                } else if (serviceType === "load-test") {
+                    serviceSectionsData["load-test"] = collectLoadTestData();
+                    console.log(
+                        "Collected Load Test data:",
+                        serviceSectionsData["load-test"]
+                    );
+                } else if (serviceType === "thorough-examination") {
+                    serviceSectionsData["thorough-examination"] =
+                        collectThoroughExaminationData();
+                    console.log(
+                        "Collected Thorough Examination data:",
+                        serviceSectionsData["thorough-examination"]
+                    );
+                } else if (serviceType === "visual") {
+                    serviceSectionsData["visual"] = collectVisualData();
+                    console.log(
+                        "Collected Visual data:",
+                        serviceSectionsData["visual"]
+                    );
+                } else {
+                    // Generic collection for any other service type
+                    serviceSectionsData[serviceType] =
+                        collectGenericServiceData(sectionId);
+                    console.log(
+                        `Collected ${serviceType} data:`,
+                        serviceSectionsData[serviceType]
+                    );
+                }
+            }
+        });
     }
 
-    // Collect other service sections as they are implemented
-    // Example: NDT, Load Testing, etc.
-
+    console.log("Final service sections data:", serviceSectionsData);
     return serviceSectionsData;
 }
 
@@ -3413,10 +3495,12 @@ function getAllServiceSectionsData() {
 function collectMpiData() {
     const mpiData = {};
 
-    // Get all MPI form fields
+    // Get all MPI form fields from the MPI section
     const mpiFields = document.querySelectorAll(
-        "#mpiDataContainer input, #mpiDataContainer select, #mpiDataContainer textarea"
+        "#section-mpi-service input, #section-mpi-service select, #section-mpi-service textarea"
     );
+
+    console.log("Found MPI fields:", mpiFields.length);
 
     mpiFields.forEach((field) => {
         if (field.name) {
@@ -3429,10 +3513,158 @@ function collectMpiData() {
             } else {
                 mpiData[field.name] = field.value;
             }
+            console.log(`MPI field ${field.name}: ${mpiData[field.name]}`);
         }
     });
 
     return mpiData;
+}
+
+// Collect Lifting Examination specific data
+function collectLiftingExaminationData() {
+    const liftingData = {};
+    const liftingFields = document.querySelectorAll(
+        "#section-lifting-examination input, #section-lifting-examination select, #section-lifting-examination textarea"
+    );
+
+    console.log("Found Lifting Examination fields:", liftingFields.length);
+
+    liftingFields.forEach((field) => {
+        if (field.name) {
+            if (field.type === "checkbox") {
+                liftingData[field.name] = field.checked;
+            } else if (field.type === "radio") {
+                if (field.checked) {
+                    liftingData[field.name] = field.value;
+                }
+            } else {
+                liftingData[field.name] = field.value;
+            }
+            console.log(
+                `Lifting field ${field.name}: ${liftingData[field.name]}`
+            );
+        }
+    });
+
+    return liftingData;
+}
+
+// Collect Load Test specific data
+function collectLoadTestData() {
+    const loadTestData = {};
+    const loadTestFields = document.querySelectorAll(
+        "#section-load-test input, #section-load-test select, #section-load-test textarea"
+    );
+
+    console.log("Found Load Test fields:", loadTestFields.length);
+
+    loadTestFields.forEach((field) => {
+        if (field.name) {
+            if (field.type === "checkbox") {
+                loadTestData[field.name] = field.checked;
+            } else if (field.type === "radio") {
+                if (field.checked) {
+                    loadTestData[field.name] = field.value;
+                }
+            } else {
+                loadTestData[field.name] = field.value;
+            }
+            console.log(
+                `Load Test field ${field.name}: ${loadTestData[field.name]}`
+            );
+        }
+    });
+
+    return loadTestData;
+}
+
+// Collect Thorough Examination specific data
+function collectThoroughExaminationData() {
+    const thoroughData = {};
+    const thoroughFields = document.querySelectorAll(
+        "#section-thorough-examination input, #section-thorough-examination select, #section-thorough-examination textarea"
+    );
+
+    console.log("Found Thorough Examination fields:", thoroughFields.length);
+
+    thoroughFields.forEach((field) => {
+        if (field.name) {
+            if (field.type === "checkbox") {
+                thoroughData[field.name] = field.checked;
+            } else if (field.type === "radio") {
+                if (field.checked) {
+                    thoroughData[field.name] = field.value;
+                }
+            } else {
+                thoroughData[field.name] = field.value;
+            }
+            console.log(
+                `Thorough Examination field ${field.name}: ${
+                    thoroughData[field.name]
+                }`
+            );
+        }
+    });
+
+    return thoroughData;
+}
+
+// Collect Visual specific data
+function collectVisualData() {
+    const visualData = {};
+    const visualFields = document.querySelectorAll(
+        "#section-visual input, #section-visual select, #section-visual textarea"
+    );
+
+    console.log("Found Visual fields:", visualFields.length);
+
+    visualFields.forEach((field) => {
+        if (field.name) {
+            if (field.type === "checkbox") {
+                visualData[field.name] = field.checked;
+            } else if (field.type === "radio") {
+                if (field.checked) {
+                    visualData[field.name] = field.value;
+                }
+            } else {
+                visualData[field.name] = field.value;
+            }
+            console.log(
+                `Visual field ${field.name}: ${visualData[field.name]}`
+            );
+        }
+    });
+
+    return visualData;
+}
+
+// Generic service data collection for any service type
+function collectGenericServiceData(sectionId) {
+    const serviceData = {};
+    const serviceFields = document.querySelectorAll(
+        `#${sectionId} input, #${sectionId} select, #${sectionId} textarea`
+    );
+
+    console.log(`Found ${sectionId} fields:`, serviceFields.length);
+
+    serviceFields.forEach((field) => {
+        if (field.name) {
+            if (field.type === "checkbox") {
+                serviceData[field.name] = field.checked;
+            } else if (field.type === "radio") {
+                if (field.checked) {
+                    serviceData[field.name] = field.value;
+                }
+            } else {
+                serviceData[field.name] = field.value;
+            }
+            console.log(
+                `${sectionId} field ${field.name}: ${serviceData[field.name]}`
+            );
+        }
+    });
+
+    return serviceData;
 }
 
 // Restore service sections data
@@ -3736,69 +3968,124 @@ function showErrorMessage(message) {
 // Add dynamic data to form data (personnel, equipment, etc.)
 function addDynamicDataToFormData(formData) {
     try {
-        // Add selected services
+        const debugInfo = {
+            timestamp: new Date().toISOString(),
+            selectedServices: selectedServices,
+            personnelData: personnelData,
+            equipmentData: equipmentData,
+            consumableData: consumableData,
+            uploadedImages: window.uploadedImages || [],
+        };
+
+        // Store debug info in localStorage for persistence
+        localStorage.setItem(
+            "lastFormSubmissionDebug",
+            JSON.stringify(debugInfo)
+        );
+
+        console.log("=== DYNAMIC DATA DEBUG START ===");
+        console.log("addDynamicDataToFormData called");
+        console.log("selectedServices:", selectedServices);
+        console.log("personnelData:", personnelData);
+        console.log("equipmentData:", equipmentData);
+        console.log("consumableData:", consumableData);
+        console.log("window.uploadedImages:", window.uploadedImages);
+
+        // Alert with key info for immediate visibility
+        alert(`DEBUG INFO:
+Services: ${selectedServices ? selectedServices.length : 0}
+Personnel: ${personnelData ? personnelData.length : 0}
+Equipment: ${equipmentData ? equipmentData.length : 0}
+Consumables: ${consumableData ? consumableData.length : 0}
+Check console for details!`);
+
+        console.log("window.uploadedImages:", window.uploadedImages);
+
+        // Add selected services as JSON
         if (selectedServices && selectedServices.length > 0) {
-            selectedServices.forEach((service, index) => {
-                formData.append(
-                    `selected_services[${index}]`,
-                    JSON.stringify(service)
-                );
-            });
+            console.log(
+                "Adding services to form data:",
+                selectedServices.length
+            );
+            formData.append(
+                "selected_services",
+                JSON.stringify(selectedServices)
+            );
+            console.log("Added services as JSON:", selectedServices);
+        } else {
+            console.log("No selected services to add");
         }
 
-        // Add personnel assignments
-        if (
-            window.personnelAssignments &&
-            window.personnelAssignments.length > 0
-        ) {
-            window.personnelAssignments.forEach((assignment, index) => {
-                Object.keys(assignment).forEach((key) => {
-                    formData.append(
-                        `personnel_assignments[${index}][${key}]`,
-                        assignment[key]
-                    );
-                });
-            });
+        // Add personnel assignments as JSON
+        if (personnelData && personnelData.length > 0) {
+            console.log("Adding personnel to form data:", personnelData.length);
+            formData.append(
+                "personnel_assignments",
+                JSON.stringify(personnelData)
+            );
+            console.log("Added personnel as JSON:", personnelData);
+        } else {
+            console.log("No personnel assignments to add");
         }
 
-        // Add equipment assignments
-        if (
-            window.equipmentAssignments &&
-            window.equipmentAssignments.length > 0
-        ) {
-            window.equipmentAssignments.forEach((assignment, index) => {
-                Object.keys(assignment).forEach((key) => {
-                    formData.append(
-                        `equipment_assignments[${index}][${key}]`,
-                        assignment[key]
-                    );
-                });
-            });
+        // Add equipment assignments as JSON
+        if (equipmentData && equipmentData.length > 0) {
+            console.log("Adding equipment to form data:", equipmentData.length);
+            formData.append(
+                "equipment_assignments",
+                JSON.stringify(equipmentData)
+            );
+            console.log("Added equipment as JSON:", equipmentData);
+        } else {
+            console.log("No equipment assignments to add");
         }
 
-        // Add consumable assignments
+        // Add consumable assignments as JSON
+        if (consumableData && consumableData.length > 0) {
+            console.log(
+                "Adding consumables to form data:",
+                consumableData.length
+            );
+            formData.append(
+                "consumable_assignments",
+                JSON.stringify(consumableData)
+            );
+            console.log("Added consumables as JSON:", consumableData);
+        } else {
+            console.log("No consumable assignments to add");
+        }
+
+        // Add service sections data (MPI, etc.)
+        const serviceSectionsData = getAllServiceSectionsData();
         if (
-            window.consumableAssignments &&
-            window.consumableAssignments.length > 0
+            serviceSectionsData &&
+            Object.keys(serviceSectionsData).length > 0
         ) {
-            window.consumableAssignments.forEach((assignment, index) => {
-                Object.keys(assignment).forEach((key) => {
-                    formData.append(
-                        `consumable_assignments[${index}][${key}]`,
-                        assignment[key]
-                    );
-                });
-            });
+            console.log("Adding service sections data:", serviceSectionsData);
+            formData.append(
+                "service_sections_data",
+                JSON.stringify(serviceSectionsData)
+            );
+            console.log("Added service sections as JSON:", serviceSectionsData);
+        } else {
+            console.log("No service sections data to add");
         }
 
         // Add uploaded images
         if (window.uploadedImages && window.uploadedImages.length > 0) {
+            console.log(
+                "Adding images to form data:",
+                window.uploadedImages.length
+            );
             window.uploadedImages.forEach((image, index) => {
                 formData.append(
                     `uploaded_images[${index}]`,
                     JSON.stringify(image)
                 );
+                console.log(`Added image ${index}:`, image);
             });
+        } else {
+            console.log("No uploaded images to add");
         }
 
         console.log("Dynamic data added to form submission");

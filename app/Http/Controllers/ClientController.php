@@ -6,6 +6,7 @@ use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ClientController extends Controller
 {
@@ -237,53 +238,111 @@ class ClientController extends Controller
     public function getClients(Request $request)
     {
         try {
-            $query = Client::active();
-            
-            // Search functionality for AJAX requests
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('client_name', 'like', "%{$search}%")
-                      ->orWhere('client_code', 'like', "%{$search}%")
-                      ->orWhere('contact_person', 'like', "%{$search}%");
-                });
+            // Early exit if table doesn't exist (prevents 500 during setup)
+            if (!Schema::hasTable('clients')) {
+                return response()->json([]);
             }
-            
-            $clients = $query->select([
-                'id',
-                'client_name',
-                'client_code',
-                'company_type',
-                'industry',
-                'address',
-                'city',
-                'state',
-                'country',
-                'postal_code',
-                'phone',
-                'email',
-                'website',
-                'contact_person',
-                'contact_position',
-                'contact_phone',
-                'contact_email',
-                'payment_terms',
-                'preferred_currency',
-                'notes'
-            ])
-            ->orderBy('client_name')
-            ->limit(50)
-            ->get();
-            
-            // Add computed fields
-            $clients->each(function ($client) {
-                $client->display_name = $client->display_name;
-                $client->full_address = $client->full_address;
-            });
-            
-            return response()->json($clients);
+            // Helper to run the base select + mapping on a given builder
+            $runQuery = function ($builder, $request) {
+                // Search functionality for AJAX requests
+                if ($request->filled('search')) {
+                    $search = $request->input('search');
+                    $builder->where(function ($q) use ($search) {
+                        $q->where('client_name', 'like', "%{$search}%")
+                          ->orWhere('client_code', 'like', "%{$search}%")
+                          ->orWhere('contact_person', 'like', "%{$search}%");
+                    });
+                }
+
+                return $builder->select([
+                    'id',
+                    'client_name',
+                    'client_code',
+                    'company_type',
+                    'industry',
+                    'address',
+                    'city',
+                    'state',
+                    'country',
+                    'postal_code',
+                    'phone',
+                    'email',
+                    'website',
+                    'contact_person',
+                    'contact_position',
+                    'contact_phone',
+                    'contact_email',
+                    'payment_terms',
+                    'preferred_currency',
+                    'notes',
+                ])
+                ->orderBy('client_name')
+                ->limit(50)
+                ->get()
+                ->map(function ($c) {
+                    $display = $c->client_code
+                        ? $c->client_name . ' (' . $c->client_code . ')'
+                        : $c->client_name;
+
+                    $fullAddressParts = array_filter([
+                        $c->address,
+                        $c->city,
+                        $c->state,
+                        trim(($c->postal_code ?? '') . ''),
+                        $c->country,
+                    ], function ($v) { return (string) $v !== ''; });
+
+                    $c->display_name = $display;
+                    $c->full_address = implode(', ', $fullAddressParts);
+                    return $c;
+                })
+                ->values();
+            };
+
+            // First, try default connection
+            $defaultBuilder = DB::table('clients');
+            $clients = $runQuery($defaultBuilder, $request);
+
+            // If empty, try MySQL connection as a fallback (useful if .env points to sqlite)
+            if ($clients->isEmpty() && config('database.connections.mysql')) {
+                try {
+                    $mysqlBuilder = DB::connection('mysql')->table('clients');
+                    $mysqlClients = $runQuery($mysqlBuilder, $request);
+                    if ($mysqlClients->isNotEmpty()) {
+                        $clients = $mysqlClients;
+                    }
+                    // If still empty, attempt forcing a specific MySQL database name (e.g., 'sc')
+                    if ($clients->isEmpty()) {
+                        $forcedDb = env('DB_MYSQL_DATABASE', 'sc');
+                        $currentDb = config('database.connections.mysql.database');
+                        if ($forcedDb && $forcedDb !== $currentDb) {
+                            config(['database.connections.mysql.database' => $forcedDb]);
+                            $mysqlForced = DB::connection('mysql')->table('clients');
+                            $forcedClients = $runQuery($mysqlForced, $request);
+                            if ($forcedClients->isNotEmpty()) {
+                                $clients = $forcedClients;
+                            }
+                        }
+                    }
+                } catch (\Throwable $t) {
+                    // Ignore if mysql connection is not configured or fails
+                    \Log::info('MySQL fallback for clients failed or not configured', [
+                        'message' => $t->getMessage(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'clients' => $clients
+            ]);
             
         } catch (\Exception $e) {
+            \Log::error('getClients failed', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'error' => 'Failed to fetch clients: ' . $e->getMessage()
             ], 500);

@@ -28,6 +28,20 @@
                     </div>
                 @endif
 
+                @auth
+                    <div class="alert alert-info alert-dismissible fade show m-3" role="alert">
+                        <i class="fas fa-user me-2"></i>
+                        Logged in as: {{ auth()->user()->name }} ({{ auth()->user()->email }})
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @else
+                    <div class="alert alert-warning alert-dismissible fade show m-3" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Warning: You are not logged in. Please <a href="{{ route('login') }}">login</a> to submit inspections.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endauth
+
                 <form id="liftingInspectionForm" method="POST" action="{{ route('inspections.store') }}" enctype="multipart/form-data" novalidate>
                     @csrf
                     
@@ -45,7 +59,7 @@
                     
                     @include('inspections.sections.visual')
                     
-                    @include('inspections.sections.equipment')
+                    @include('inspections.sections.equipment-details')
                     
                     @include('inspections.sections.asset-details')
                     
@@ -68,13 +82,11 @@
 @include('inspections.modals.add-service-modal')
 @include('inspections.modals.lifting-examination-modal')
 @include('inspections.modals.mpi-service-modal')
+@include('inspections.modals.visual-inspection-modal')
+@include('inspections.modals.load-test-modal')
+@include('inspections.modals.thorough-examination-modal')
+@include('inspections.modals.ultrasonic-test-modal')
 @include('inspections.modals.confirmation-modal')
-
-<!-- New Modal-Based Entry Modals -->
-@include('inspections.modals.asset-modal')
-@include('inspections.modals.item-modal')
-@include('inspections.modals.equipment-new-modal')
-@include('inspections.modals.consumable-new-modal')
 
 @endsection
 
@@ -83,5 +95,5 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/inspection-form.js') }}"></script>
+<script src="{{ asset('js/inspection-form-simple.js') }}"></script>
 @endpush

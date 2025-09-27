@@ -50,7 +50,6 @@
                     <option value="dip">Dip Application</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Ink/Powder 1 Application Method <span class="text-danger">*</span>
@@ -63,7 +62,6 @@
                     <option value="dry_residual">Dry Residual</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Magnetic Particle Concentration
@@ -84,7 +82,6 @@
                     <option value="multidirectional">Multidirectional</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Ink/Powder 1 Carrier Type <span class="text-danger">*</span>
@@ -97,7 +94,6 @@
                     <option value="conditioner">Conditioner</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Contact Spacing
@@ -119,7 +115,6 @@
                     <option value="three_phase">Three Phase AC</option>
                 </select>
             </div>
-
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Ink/Powder 2 Application Method
@@ -132,16 +127,6 @@
                     <option value="dry_residual">Dry Residual</option>
                 </select>
             </div>
-
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">
-                    Field Application Time
-                </label>
-                <input type="text" class="form-control" name="field_application_time" 
-                       placeholder="Enter application time">
-            </div>
-
-            <!-- Fourth Row -->
             <div class="col-md-4">
                 <label class="form-label fw-semibold">
                     Ink/Powder 2 Carrier Type
@@ -155,35 +140,18 @@
                 </select>
             </div>
 
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">
-                    Black Light Intensity - Beginning
-                </label>
-                <input type="text" class="form-control" name="black_light_intensity_begin" 
-                       placeholder="Enter beginning intensity">
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">
-                    Black Light Intensity - End
-                </label>
-                <input type="text" class="form-control" name="black_light_intensity_end" 
-                       placeholder="Enter end intensity">
-            </div>
-
-            <!-- Additional Fields Row -->
+            <!-- Fourth Row -->
             <div class="col-md-3">
                 <label class="form-label fw-semibold">
                     Test Temperature
                 </label>
                 <select class="form-select" name="test_temperature">
-                    <option value="">Select Temperature...</option>
+                    <option value="">Select...</option>
                     <option value="ambient">Ambient</option>
                     <option value="elevated">Elevated</option>
                     <option value="controlled">Controlled</option>
                 </select>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label fw-semibold">
                     Pull Test
@@ -195,7 +163,6 @@
                     <option value="failed">Failed</option>
                 </select>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label fw-semibold">
                     Post Test Cleaning
@@ -208,7 +175,6 @@
                     <option value="not_required">Not Required</option>
                 </select>
             </div>
-
             <div class="col-md-3">
                 <label class="form-label fw-semibold">
                     Initial Demagnetisation

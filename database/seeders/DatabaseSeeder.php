@@ -13,11 +13,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create admin users first
+        $this->command->info('Starting database seeding...');
+        
+        // Seed users and roles first
         $this->call([
-            SuperAdminSeeder::class,
-            InspectionDataSeeder::class,
-            CompleteInspectionSeeder::class,
+            UserSeeder::class,
+            ClientSeeder::class,
+            PersonnelSeeder::class,
+            EquipmentSeeder::class,
+            ConsumableSeeder::class,
+            InspectionSeeder::class,
         ]);
         
         $this->command->info('Database seeding completed successfully!');

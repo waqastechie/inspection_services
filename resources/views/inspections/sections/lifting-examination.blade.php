@@ -74,21 +74,7 @@
             <label class="form-label fw-bold text-danger">
                 B. Is it the case that the equipment would be safe to operate?
             </label>
-            
-            <div class="d-flex gap-4">
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="safe_to_operate" id="safeYes" value="yes">
-                    <label class="form-check-label" for="safeYes">
-                        <i class="fas fa-check-circle text-success me-2"></i>Yes
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="safe_to_operate" id="safeNo" value="no">
-                    <label class="form-check-label" for="safeNo">
-                        <i class="fas fa-times-circle text-danger me-2"></i>No
-                    </label>
-                </div>
-            </div>
+            <input class="form-control" type="text" name="equipment_safe_to_operate" placeholder="Yes">
         </div>
 
         <!-- Question C -->
@@ -161,63 +147,69 @@
                       rows="6" placeholder="Enter details of any tests carried out as part of the examination..."></textarea>
         </div>
     </div>
+    <style>
+    .inspection-question {
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    .conditional-question {
+        margin-top: 1rem;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .form-check-label {
+        font-weight: 500;
+    }
+    .alert.border-start {
+        border-left-width: 4px !important;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle Question A conditional logic
+        const firstExamRadios = document.querySelectorAll('input[name="first_examination"]');
+        const equipmentInstallationQuestion = document.getElementById('equipmentInstallationQuestion');
+
+        firstExamRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'yes' && this.checked) {
+                    equipmentInstallationQuestion.style.display = 'block';
+                } else {
+                    equipmentInstallationQuestion.style.display = 'none';
+                }
+            });
+        });
+
+        // Handle Question C conditional logic
+        const equipmentDefectRadios = document.querySelectorAll('input[name="equipment_defect"]');
+        const defectDetailsSection = document.getElementById('defectDetailsSection');
+
+        equipmentDefectRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'yes' && this.checked) {
+                    defectDetailsSection.style.display = 'block';
+                } else {
+                    defectDetailsSection.style.display = 'none';
+                }
+            });
+        });
+
+        // Initialize state on page load
+        const selectedFirstExam = document.querySelector('input[name="first_examination"]:checked');
+        if (selectedFirstExam && selectedFirstExam.value === 'yes') {
+            equipmentInstallationQuestion.style.display = 'block';
+        }
+
+        const selectedDefect = document.querySelector('input[name="equipment_defect"]:checked');
+        if (selectedDefect && selectedDefect.value === 'yes') {
+            defectDetailsSection.style.display = 'block';
+        }
+    });
+    </script>
 </section>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle conditional questions for first examination
-    const firstExamRadios = document.querySelectorAll('input[name="first_examination"]');
-    const equipmentQuestion = document.getElementById('equipmentInstallationQuestion');
-
-    firstExamRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'yes' && this.checked) {
-                equipmentQuestion.style.display = 'block';
-            } else {
-                equipmentQuestion.style.display = 'none';
-            }
-        });
-    });
-
-    // Handle conditional questions for defects
-    const defectRadios = document.querySelectorAll('input[name="equipment_defect"]');
-    const defectSection = document.getElementById('defectDetailsSection');
-
-    defectRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'yes' && this.checked) {
-                defectSection.style.display = 'block';
-            } else {
-                defectSection.style.display = 'none';
-            }
-        });
-    });
-});
-</script>
-
-<style>
-.inspection-question {
-    padding: 1.5rem;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-}
-
-.conditional-question {
-    margin-top: 1rem;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.form-check-label {
-    font-weight: 500;
-}
-
-.alert.border-start {
-    border-left-width: 4px !important;
-}
-</style>

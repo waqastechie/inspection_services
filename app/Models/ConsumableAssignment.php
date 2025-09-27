@@ -30,11 +30,7 @@ class ConsumableAssignment extends Model
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
         'quantity_used' => 'decimal:3',
-        'unit_cost' => 'decimal:2',
-        'total_cost' => 'decimal:2',
-        'assigned_services' => 'array',
     ];
 
     /**
@@ -54,57 +50,36 @@ class ConsumableAssignment extends Model
     }
 
     /**
-     * Get consumable type display name
+     * Get consumable type display name (retrieved from related consumable)
      */
     public function getConsumableTypeNameAttribute(): string
     {
-        return match($this->consumable_type) {
-            'ut_couplant' => 'UT Couplant',
-            'pt_penetrant' => 'PT Penetrant',
-            'pt_developer' => 'PT Developer',
-            'pt_remover' => 'PT Remover',
-            'mt_ink' => 'MT Ink',
-            'mt_powder' => 'MT Powder',
-            'contrast_paint' => 'Contrast Paint',
-            'cleaning_solvent' => 'Cleaning Solvent',
-            'disposable_gloves' => 'Disposable Gloves',
-            'face_masks' => 'Face Masks',
-            'coveralls' => 'Disposable Coveralls',
-            'shoe_covers' => 'Shoe Covers',
-            'safety_glasses' => 'Safety Glasses',
-            'cleaning_rags' => 'Cleaning Rags',
-            'paper_towels' => 'Paper Towels',
-            'masking_tape' => 'Masking Tape',
-            'plastic_sheeting' => 'Plastic Sheeting',
-            'marking_pen' => 'Marking Pen',
-            'labels_tags' => 'Labels/Tags',
-            'batteries' => 'Batteries',
-            default => ucfirst(str_replace('_', ' ', $this->consumable_type))
-        };
+        if ($this->consumable) {
+            return $this->consumable->type;
+        }
+        return 'Unknown';
     }
 
     /**
-     * Check if consumable is near expiry (within 30 days)
+     * Check if consumable is near expiry (retrieved from related consumable)
      */
     public function getIsExpiringAttribute(): bool
     {
-        if (!$this->expiry_date) {
-            return false;
+        if ($this->consumable && $this->consumable->expiry_date) {
+            return $this->consumable->expiry_date->diffInDays(now()) <= 30;
         }
-        
-        return $this->expiry_date->diffInDays(now()) <= 30;
+        return false;
     }
 
     /**
-     * Check if consumable is expired
+     * Check if consumable is expired (retrieved from related consumable)
      */
     public function getIsExpiredAttribute(): bool
     {
-        if (!$this->expiry_date) {
-            return false;
+        if ($this->consumable && $this->consumable->expiry_date) {
+            return $this->consumable->expiry_date->isPast();
         }
-        
-        return $this->expiry_date->isPast();
+        return false;
     }
 
     /**
@@ -128,10 +103,7 @@ class ConsumableAssignment extends Model
     {
         parent::boot();
         
-        static::saving(function ($model) {
-            if ($model->unit_cost && $model->quantity_used) {
-                $model->total_cost = $model->unit_cost * $model->quantity_used;
-            }
-        });
+        // Note: total cost calculation removed since unit_cost field no longer exists
+        // Cost information can be retrieved from the related consumable if needed
     }
 }

@@ -17,6 +17,7 @@ class Consumable extends Model
         'brand_manufacturer',
         'product_code',
         'batch_lot_number',
+        'description',
         'expiry_date',
         'quantity_available',
         'unit',
@@ -25,13 +26,16 @@ class Consumable extends Model
         'condition',
         'storage_requirements',
         'safety_notes',
+        'services',
         'is_active',
+        // Legacy fields for compatibility
+        'manufacturer',
+        'batch_number',
     ];
 
     protected $casts = [
         'expiry_date' => 'date',
-        'quantity_available' => 'decimal:2',
-        'unit_cost' => 'decimal:2',
+        'services' => 'array',
         'is_active' => 'boolean',
     ];
 
@@ -114,10 +118,32 @@ class Consumable extends Model
     }
 
     /**
-     * Scope for low stock items
+     * Scope for low stock items - Not applicable with new structure
+     * This method is kept for backward compatibility but always returns empty
      */
     public function scopeLowStock($query, $threshold = 10)
     {
-        return $query->where('quantity_available', '<=', $threshold);
+        // With new structure, we don't track quantity_available in master table
+        // Low stock would be tracked in consumable_assignments usage patterns
+        return $query->whereRaw('1 = 0'); // Always return empty result
+    }
+    
+    /**
+     * Get consumables by service type
+     */
+    public function scopeForService($query, $service)
+    {
+        return $query->whereJsonContains('services', $service);
+    }
+    
+    /**
+     * Get consumables that support multiple services
+     */
+    public function scopeForServices($query, array $services)
+    {
+        foreach ($services as $service) {
+            $query->orWhereJsonContains('services', $service);
+        }
+        return $query;
     }
 }

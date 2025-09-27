@@ -23,6 +23,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Custom CSS -->
+    <link href="{{ asset('css/validation.css') }}" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #1e40af;
@@ -256,6 +259,36 @@
                             <i class="fas fa-clipboard-list me-1"></i> Inspections
                         </a>
                     </li>
+                    @if(auth()->user()->canApproveInspections())
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="qaDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-shield-check me-1"></i> QA Review
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="qaDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('qa.dashboard') }}">
+                                        <i class="fas fa-tachometer-alt me-2"></i> QA Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('qa.pending') }}">
+                                        <i class="fas fa-clock me-2"></i> Pending Review
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('qa.under-review') }}">
+                                        <i class="fas fa-eye me-2"></i> Under Review
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('qa.history') }}">
+                                        <i class="fas fa-history me-2"></i> Review History
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    @endif
                     @if(auth()->user()->isAdmin())
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('users.index') }}">
@@ -403,6 +436,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
+
+    <!-- Alpine.js for reactive validation -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <!-- Custom JavaScript -->
     <script>

@@ -9,6 +9,13 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    /**
+     * Check if user is client
+     */
+    public function isClient(): bool
+    {
+        return $this->role === 'client';
+    }
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
@@ -81,6 +88,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is QA (Quality Assurance)
+     */
+    public function isQA(): bool
+    {
+        return $this->role === 'qa';
+    }
+
+    /**
+     * Check if user can approve inspections (QA or Admin)
+     */
+    public function canApproveInspections(): bool
+    {
+        return in_array($this->role, ['qa', 'admin', 'super_admin']);
+    }
+
+    /**
      * Get role color for badges
      */
     public function getRoleColorAttribute(): string
@@ -89,6 +112,7 @@ class User extends Authenticatable
             'super_admin' => 'danger',
             'admin' => 'warning',
             'inspector' => 'primary',
+            'qa' => 'success',
             'viewer' => 'secondary',
             default => 'secondary'
         };
@@ -103,6 +127,7 @@ class User extends Authenticatable
             'super_admin' => 'Super Administrator',
             'admin' => 'Administrator',
             'inspector' => 'Inspector',
+            'qa' => 'Quality Assurance',
             'viewer' => 'Viewer',
             default => 'Unknown'
         };
