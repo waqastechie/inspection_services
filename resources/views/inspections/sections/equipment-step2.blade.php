@@ -58,17 +58,12 @@
             </div>
 
             <div class="col-md-6">
-                <label for="equipment_capacity" class="form-label">Capacity/SWL</label>
-                <input type="text" class="form-control" id="equipment_capacity" name="equipment_capacity" placeholder="e.g., 50 tonnes">
-            </div>
-
-            <div class="col-md-6">
-                <label for="equipment_cert_date" class="form-label">Last Certification Date</label>
+                <label for="equipment_cert_date" class="form-label">Last Calibration Date</label>
                 <input type="date" class="form-control" id="equipment_cert_date" name="equipment_cert_date">
             </div>
 
             <div class="col-md-6">
-                <label for="equipment_next_due" class="form-label">Next Inspection Due</label>
+                <label for="equipment_next_due" class="form-label">Next Calibration Due</label>
                 <input type="date" class="form-control" id="equipment_next_due" name="equipment_next_due">
             </div>
 

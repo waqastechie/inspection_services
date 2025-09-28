@@ -462,10 +462,39 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted">Your recent inspection reports will appear here.</p>
-                        <a href="{{ route('inspections.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus me-2"></i>Create New Inspection
+                        @if(Auth::user()->role_name === 'Quality Assurance')
+        @php
+            $qaInspections = App\Models\Inspection::where('qa_reviewer_id', Auth::id())
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+        @endphp
+        @if($qaInspections->count() > 0)
+            <ul class="list-group list-group-flush mb-3">
+                @foreach($qaInspections as $inspection)
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ $inspection->inspection_number }}</strong>
+                            <span class="text-muted small">{{ $inspection->client->client_name ?? 'Unknown Client' }}</span>
+                        </div>
+                        <a href="{{ route('qa.review', $inspection) }}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-eye"></i> Review
                         </a>
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <p class="text-muted mb-0">No inspections assigned to you for QA review.</p>
+        @endif
+        <a href="{{ route('qa.pending') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Inspection
+        </a>
+    @else
+        <p class="text-muted">Your recent inspection reports will appear here.</p>
+        <a href="{{ route('inspections.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Inspection
+        </a>
+    @endif
                     </div>
                 </div>
             </div>

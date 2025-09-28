@@ -1,5 +1,48 @@
 {{-- Step 4: Equipment and Items Management --}}
 <div class="step-content">
+    <!-- Reason for Examination Information Box -->
+    <div class="alert alert-primary mb-3">
+        <h6><i class="fas fa-info-circle me-2"></i>Reference Information</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <small>
+                    <strong>Reason for Examination:</strong><br>
+                    <strong>A:</strong> New Installation<br>
+                    <strong>B:</strong> 6 Monthly<br>
+                    <strong>C:</strong> 12 Monthly<br>
+                    <strong>D:</strong> Written Scheme<br>
+                    <strong>E:</strong> Exceptional Circumstances
+                </small>
+            </div>
+            <di        wizardForm.addEventListener('submit', function(e) {
+            console.log('FORM SUBMIT INTERCEPTED - Step 3 Equipment Assignments');
+            alert('Form submit intercepted! Check console for details.');
+            
+            // Check if we're on step 3
+            const stepInput = document.querySelector('input[name="step"]');
+            const currentStep = stepInput ? stepInput.value : '';
+            
+            console.log('Current step found:', currentStep);
+            
+            if (currentStep == '3') {
+                console.log('PREVENTING DEFAULT FORM SUBMISSION');
+                e.preventDefault(); // Prevent normal submission
+                
+                // Call our equipment assignments function
+                console.log('Calling step4SaveAndContinue function...');
+                const success = window.step4SaveAndContinue();
+                console.log('Equipment assignments function returned:', success);6">
+                <small>
+                    <strong>Status Reference:</strong><br>
+                    <strong>ND</strong> – No Defect<br>
+                    <strong>SDR</strong> – See Defect Report<br>
+                    <strong>NF</strong> – Not Found<br>
+                    <strong>OBS</strong> – Observation (see Defect Report)
+                </small>
+            </div>
+        </div>
+    </div>
+
     <div class="alert alert-info">
         <h5><i class="fas fa-tools me-2"></i>Equipment Items Management</h5>
         <p>Manage inspection items with their equipment types and detailed specifications.</p>
@@ -45,16 +88,11 @@
                                 <!-- Default editable row -->
                                 <tr data-row-id="row_default">
                                     <td>
-                                        <select class="form-select form-select-sm" data-field="equipment_type">
-                                            <option value="">Select Equipment Type</option>
-                                            <option value="Gas Rack">Gas Rack</option>
-                                            <option value="Wire Rope">Wire Rope</option>
-                                            <option value="Bow Shackle">Bow Shackle</option>
-                                            <option value="Chain Sling">Chain Sling</option>
-                                            <option value="Lifting Frame">Lifting Frame</option>
-                                            <option value="Offshore Container">Offshore Container</option>
-                                            <option value="Safety Pin">Safety Pin</option>
-                                            <option value="Other">Other</option>
+                                        <select class="form-select form-select-sm" data-field="equipment_id" required>
+                                            <option value="">Select Equipment</option>
+                                            @foreach($equipment as $eq)
+                                                <option value="{{ $eq->id }}">{{ $eq->name }} ({{ $eq->type }})</option>
+                                            @endforeach
                                         </select>
                                     </td>
                                     <td>
@@ -64,10 +102,10 @@
                                         <textarea class="form-control form-control-sm" data-field="description" rows="2" placeholder="Description and Identification"></textarea>
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" data-field="swl" placeholder="SWL (kg/tons)">
+                                    <input type="text" class="form-control form-control-sm" data-field="swl" placeholder="SWL (kg/tons)">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" data-field="test_load_applied" placeholder="Test Load (kg/tons)">
+                                    <input type="text" class="form-control form-control-sm" data-field="test_load_applied" placeholder="Test Load (kg/tons)">
                                     </td>
                                     <td>
                                         <select class="form-select form-select-sm" data-field="reason_for_examination">
@@ -133,36 +171,37 @@
 </style>
 
 <script>
+// Pre-render equipment options for dynamic rows
+window.equipmentOptionsHtml = '<option value="">Select Equipment</option>';
+@if(isset($equipment) && $equipment->count() > 0)
+    @foreach($equipment as $eq)
+        window.equipmentOptionsHtml += '<option value="{{ $eq->id }}">{{ $eq->name }} ({{ $eq->type }})</option>';
+    @endforeach
+@endif
+
 // Define functions at global scope immediately
 window.addNewEditableRow = function() {
+    console.log('addNewEditableRow function called');
     var tableBody = document.getElementById('itemsTableBody');
     if (!tableBody) {
         console.error('Table body not found!');
         return;
     }
+    console.log('Table body found, creating new row');
     
     var rowId = 'row_' + Date.now();
     var row = document.createElement('tr');
     row.setAttribute('data-row-id', rowId);
     
-    // Use simple string concatenation instead of template literals
     row.innerHTML = '<td>' +
-        '<select class="form-select form-select-sm" data-field="equipment_type">' +
-        '<option value="">Select Equipment Type</option>' +
-        '<option value="Gas Rack">Gas Rack</option>' +
-        '<option value="Wire Rope">Wire Rope</option>' +
-        '<option value="Bow Shackle">Bow Shackle</option>' +
-        '<option value="Chain Sling">Chain Sling</option>' +
-        '<option value="Lifting Frame">Lifting Frame</option>' +
-        '<option value="Offshore Container">Offshore Container</option>' +
-        '<option value="Safety Pin">Safety Pin</option>' +
-        '<option value="Other">Other</option>' +
+        '<select class="form-select form-select-sm" data-field="equipment_id" required>' +
+        window.equipmentOptionsHtml +
         '</select>' +
         '</td>' +
         '<td><input type="text" class="form-control form-control-sm" data-field="serial_number" placeholder="Serial Number"></td>' +
         '<td><textarea class="form-control form-control-sm" data-field="description" rows="2" placeholder="Description"></textarea></td>' +
-        '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm" data-field="swl" placeholder="SWL (kg/tons)"></td>' +
-        '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm" data-field="test_load_applied" placeholder="Test Load (kg/tons)"></td>' +
+    '<td><input type="text" class="form-control form-control-sm" data-field="swl" placeholder="SWL (kg/tons)"></td>' +
+    '<td><input type="text" class="form-control form-control-sm" data-field="test_load_applied" placeholder="Test Load (kg/tons)"></td>' +
         '<td>' +
         '<select class="form-select form-select-sm" data-field="reason_for_examination">' +
         '<option value="">Select Reason</option>' +
@@ -231,22 +270,30 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSaveAndContinue();
     
     loadItems();
-    
-    // Handle add new row button
-    const addRowBtn = document.getElementById('addNewRowBtn');
-    if (addRowBtn) {
-        addRowBtn.addEventListener('click', function() {
-            addNewEditableRow();
-        });
-    }
 });
 
 // Function to collect data from all table rows
 function collectTableData() {
+    console.log('=== COLLECTING TABLE DATA ===');
     const rows = document.querySelectorAll('#itemsTableBody tr[data-row-id]');
     const items = [];
     
-    console.log('Found rows:', rows.length);
+    console.log('Found rows with data-row-id:', rows.length);
+    
+    // Debug: Check all table rows
+    const allRows = document.querySelectorAll('#itemsTableBody tr');
+    console.log('Total rows in table:', allRows.length);
+    
+    allRows.forEach((row, index) => {
+        console.log(`Row ${index}:`, {
+            hasDataRowId: row.hasAttribute('data-row-id'),
+            dataRowId: row.getAttribute('data-row-id'),
+            id: row.id,
+            className: row.className
+        });
+    });
+    
+    alert('Found ' + rows.length + ' rows with data-row-id out of ' + allRows.length + ' total rows');
     
     rows.forEach(row => {
         const item = {
@@ -270,15 +317,83 @@ function collectTableData() {
                 }
             }
             
+            // Set the field value first
             item[fieldName] = value;
+            
+            // Special handling for equipment dropdown to extract name and type
+            if (fieldName === 'equipment_id' && field.tagName === 'SELECT') {
+                const selectedOption = field.options[field.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    // Extract equipment name and type from option text
+                    // Format: "Equipment Name (Equipment Type)"
+                    const optionText = selectedOption.text.trim();
+                    console.log('Selected equipment option text:', optionText);
+                    
+                    // Try to match pattern: "Name (Type)"
+                    const match = optionText.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+                    if (match) {
+                        item['equipment_name'] = match[1].trim();
+                        item['equipment_type'] = match[2].trim();
+                        console.log('Regex matched - Name:', item['equipment_name'], 'Type:', item['equipment_type']);
+                    } else {
+                        // If regex doesn't match, try manual parsing
+                        const lastParenIndex = optionText.lastIndexOf('(');
+                        const lastParenCloseIndex = optionText.lastIndexOf(')');
+                        
+                        if (lastParenIndex > 0 && lastParenCloseIndex > lastParenIndex) {
+                            item['equipment_name'] = optionText.substring(0, lastParenIndex).trim();
+                            item['equipment_type'] = optionText.substring(lastParenIndex + 1, lastParenCloseIndex).trim();
+                            console.log('Manual parsing - Name:', item['equipment_name'], 'Type:', item['equipment_type']);
+                        } else {
+                            item['equipment_name'] = optionText;
+                            item['equipment_type'] = 'unknown';
+                            console.log('No parentheses found, using full text as name:', item['equipment_name']);
+                        }
+                    }
+                } else {
+                    // No equipment selected, but we still need names for validation
+                    console.log('No equipment selected, will set fallback name later');
+                }
+            }
         });
         
-        console.log('Collected item data:', item);
+        // Ensure equipment_name is set if we have any equipment-related data
+        if ((item.equipment_id || item.serial_number || item.description) && !item.equipment_name) {
+            // Generate a meaningful name based on available data
+            if (item.description) {
+                item.equipment_name = item.description.substring(0, 50); // Use description as name
+            } else if (item.serial_number) {
+                item.equipment_name = 'Equipment S/N: ' + item.serial_number;
+            } else {
+                item.equipment_name = 'Unspecified Equipment';
+            }
+            
+            if (!item.equipment_type) {
+                item.equipment_type = 'general';
+            }
+            
+            console.log('Set fallback equipment name:', item.equipment_name);
+        }
         
-        // Include all rows that have any data (relaxed validation for debugging)
-        if (item.equipment_type || item.serial_number || item.description) {
+        console.log('Collected item data:', item);
+        console.log('Equipment ID value:', item.equipment_id);
+        console.log('Equipment name value:', item.equipment_name);
+        console.log('Equipment type value:', item.equipment_type);
+        console.log('All item keys:', Object.keys(item));
+        
+        // Include all rows that have any data (check for equipment_id instead of equipment_type)
+        console.log('Row validation check:', {
+            has_equipment_id: !!item.equipment_id,
+            has_serial_number: !!item.serial_number,
+            has_description: !!item.description,
+            equipment_id_value: item.equipment_id,
+            serial_number_value: item.serial_number,
+            description_value: item.description
+        });
+        
+        if (item.equipment_id || item.serial_number || item.description) {
             items.push(item);
-            console.log('Added item to collection');
+            console.log('Added item to collection - Total items now:', items.length);
         } else {
             console.log('Item filtered out - no key data');
         }
@@ -296,7 +411,8 @@ function initializeSaveAndContinue() {
 
 // Function to save all table data to database (called by Save & Continue)
 window.step4SaveAndContinue = function() {
-    console.log('=== STEP 4 SAVE AND CONTINUE CALLED ===');
+    console.log('=== EQUIPMENT ASSIGNMENTS SAVE FUNCTION CALLED ===');
+    alert('step4SaveAndContinue function called!');
     
     // Collect current data from the editable table
     const items = collectTableData();
@@ -318,6 +434,16 @@ window.step4SaveAndContinue = function() {
         const wizardForm = document.querySelector('form[action*="wizard/save"]') || document.querySelector('form[method="POST"]');
         console.log('Found wizard form:', wizardForm ? 'YES' : 'NO');
         if (wizardForm) {
+            // Update form action to include inspection ID
+            const currentInspectionId = window.currentInspectionId || getInspectionId();
+            if (currentInspectionId && wizardForm.action && !wizardForm.action.includes('/' + currentInspectionId)) {
+                const currentAction = wizardForm.action;
+                if (currentAction.endsWith('/save')) {
+                    wizardForm.action = currentAction + '/' + currentInspectionId;
+                    console.log('Updated form action to include inspection ID:', wizardForm.action);
+                }
+            }
+            
             wizardForm.appendChild(equipmentDataInput);
             console.log('Added equipment_data input to form');
         } else {
@@ -331,7 +457,28 @@ window.step4SaveAndContinue = function() {
     if (equipmentDataInput) {
         const jsonData = items && items.length > 0 ? JSON.stringify(items) : '[]';
         equipmentDataInput.value = jsonData;
-        console.log('Equipment data set in form input:', jsonData);
+        console.log('Equipment data set in form input - Items count:', items ? items.length : 0);
+        console.log('Equipment data JSON length:', jsonData.length);
+        console.log('Equipment data preview:', jsonData.substring(0, 300) + (jsonData.length > 300 ? '...' : ''));
+        
+        // Ensure inspection_id is included in the form
+        const wizardForm = document.querySelector('form[action*="wizard/save"]') || document.querySelector('form[method="POST"]');
+        if (wizardForm) {
+            let inspectionIdInput = document.querySelector('input[name="inspection_id"]');
+            if (!inspectionIdInput) {
+                const currentInspectionId = window.currentInspectionId || getInspectionId();
+                if (currentInspectionId) {
+                    inspectionIdInput = document.createElement('input');
+                    inspectionIdInput.type = 'hidden';
+                    inspectionIdInput.name = 'inspection_id';
+                    inspectionIdInput.value = currentInspectionId;
+                    wizardForm.appendChild(inspectionIdInput);
+                    console.log('Added inspection_id to form:', currentInspectionId);
+                }
+            } else {
+                console.log('inspection_id already in form:', inspectionIdInput.value);
+            }
+        }
         
         // Show collected data in console for verification
         console.log('Equipment data prepared for submission:', jsonData);
@@ -558,9 +705,97 @@ function initializeSaveAndContinue() {
     });
 }
 
-// Add form submit handler for Step 4
+// Test function for debugging
+window.testAddRow = function() {
+    console.log('Test function called');
+    console.log('Button exists:', !!document.getElementById('addNewRowBtn'));
+    console.log('Table body exists:', !!document.getElementById('itemsTableBody'));
+    console.log('Equipment options HTML:', window.equipmentOptionsHtml);
+    addNewEditableRow();
+};
+
+// Test equipment dropdown functionality
+window.testEquipmentDropdown = function() {
+    const dropdowns = document.querySelectorAll('select[data-field="equipment_id"]');
+    console.log('Found equipment dropdowns:', dropdowns.length);
+    
+    dropdowns.forEach((dropdown, index) => {
+        console.log(`Dropdown ${index}:`, dropdown);
+        console.log(`Options count:`, dropdown.options.length);
+        for (let i = 0; i < dropdown.options.length; i++) {
+            console.log(`Option ${i}:`, dropdown.options[i].value, '|', dropdown.options[i].text);
+        }
+    });
+};
+
+// Test equipment name extraction
+window.testEquipmentExtraction = function() {
+    const testOptions = [
+        'Digital Caliper (Measuring Tool)',
+        'Magnetic Particle Tester (NDT Equipment)',
+        'test equipment (kjhj)',
+        'Ultrasonic Testing Device (NDT Equipment)'
+    ];
+    
+    testOptions.forEach(optionText => {
+        console.log('Testing option:', optionText);
+        
+        // Test regex extraction
+        const match = optionText.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+        if (match) {
+            console.log('  Regex - Name:', match[1].trim(), 'Type:', match[2].trim());
+        } else {
+            // Manual parsing
+            const lastParenIndex = optionText.lastIndexOf('(');
+            const lastParenCloseIndex = optionText.lastIndexOf(')');
+            
+            if (lastParenIndex > 0 && lastParenCloseIndex > lastParenIndex) {
+                const name = optionText.substring(0, lastParenIndex).trim();
+                const type = optionText.substring(lastParenIndex + 1, lastParenCloseIndex).trim();
+                console.log('  Manual - Name:', name, 'Type:', type);
+            } else {
+                console.log('  No extraction possible');
+            }
+        }
+    });
+};
+
+// Simple button test
+window.testButton = function() {
+    const btn = document.getElementById('addNewRowBtn');
+    if (btn) {
+        console.log('Button found, triggering click');
+        btn.click();
+    } else {
+        console.log('Button not found');
+    }
+};
+
+// Combined DOM loaded handler
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Step 4 DOM loaded, setting up form handler');
+    console.log('Step 4 DOM loaded, setting up form handler and button');
+    
+    // Handle add new row button (moved from other DOMContentLoaded)
+    const addRowBtn = document.getElementById('addNewRowBtn');
+    if (addRowBtn) {
+        console.log('Add row button found, attaching event listener');
+        addRowBtn.addEventListener('click', function() {
+            console.log('Add row button clicked');
+            addNewEditableRow();
+        });
+        
+        // Add initial row if table is empty
+        setTimeout(function() {
+            const tableBody = document.getElementById('itemsTableBody');
+            if (tableBody && tableBody.querySelectorAll('tr[data-row-id]').length === 0) {
+                console.log('Table is empty, adding initial row');
+                addNewEditableRow();
+            }
+        }, 500);
+        
+    } else {
+        console.error('Add row button not found!');
+    }
     
     const wizardForm = document.getElementById('wizardForm');
     if (wizardForm) {
@@ -575,13 +810,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Current step:', currentStep);
             
-            if (currentStep == '4') {
-                console.log('Processing Step 4 equipment data');
+            if (currentStep == '3') {
+                console.log('Processing Step 3 equipment assignments data');
                 e.preventDefault(); // Prevent normal submission
                 
-                // Call our Step 4 function
+                // Call our equipment assignments function
                 const success = window.step4SaveAndContinue();
-                console.log('Step 4 function returned:', success);
+                console.log('Equipment assignments function returned:', success);
                 
                 if (success) {
                     console.log('Step 4 processing successful, submitting form');
@@ -599,5 +834,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Wizard form not found!');
     }
 });
-
 </script>
+
+@php
+    // Get equipment list for dropdown
+    if (!isset($equipment)) {
+        $equipment = \App\Models\Equipment::active()->orderBy('name')->get();
+    }
+@endphp

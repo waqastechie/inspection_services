@@ -254,19 +254,19 @@ class InspectionController extends Controller
                 'view' => 'inspections.wizard.step1'
             ],
             1 => [
-                'title' => 'Equipment Details',
-                'description' => 'Specify equipment information',
-                'view' => 'inspections.wizard.step2'
-            ],
-            2 => [
                 'title' => 'Services',
                 'description' => 'Select and configure inspection services',
                 'view' => 'inspections.wizard.step3'
             ],
-            3 => [
+            2 => [
                 'title' => 'Equipment Assignments',
                 'description' => 'Assign equipment for inspection',
                 'view' => 'inspections.wizard.step4'
+            ],
+            3 => [
+                'title' => 'Equipment Details',
+                'description' => 'Specify equipment information',
+                'view' => 'inspections.wizard.step2'
             ],
             4 => [
                 'title' => 'Consumables',
@@ -321,39 +321,50 @@ class InspectionController extends Controller
         return view('inspections.create-wizard', compact('currentStep', 'totalSteps', 'steps', 'personnel', 'clients', 'consumables', 'users', 'equipment') + ['inspection' => $inspectionRecord]);
     }
 
-    public function saveWizardStep(Request $request)
+    public function saveWizardStep(Request $request, $inspection = null)
     {
         $step = $request->input('step', 1);
-        $inspectionId = $request->input('inspection_id');
+        $inspectionId = $inspection ?: $request->input('inspection_id');
 
         // DEBUG: Log all incoming request data
         \Log::info('=== WIZARD STEP SAVE REQUEST ===', [
             'step' => $step,
             'inspection_id' => $inspectionId,
+            'inspection_id_is_null' => is_null($inspectionId),
+            'inspection_id_is_empty' => empty($inspectionId),
             'has_equipment_data' => $request->has('equipment_data'),
+            'equipment_data_length' => strlen($request->input('equipment_data', '')),
             'equipment_data_preview' => substr($request->input('equipment_data', ''), 0, 200),
             'all_request_keys' => array_keys($request->all()),
             'request_method' => $request->method(),
-            'url' => $request->url()
+            'url' => $request->url(),
+            'full_url' => $request->fullUrl()
         ]);
+        
+        // Force write logs immediately
+        \Log::getLogger()->pushHandler(new \Monolog\Handler\StreamHandler('php://stderr'));
 
         try {
             DB::beginTransaction();
 
             if ($inspectionId) {
+                \Log::info('Using existing inspection', ['inspection_id' => $inspectionId]);
                 $inspection = Inspection::findOrFail($inspectionId);
                 $inspection->update($request->except(['step', '_token', 'equipment_data']));
+                \Log::info('Updated existing inspection', ['inspection_id' => $inspection->id]);
             } else {
+                \Log::info('Creating new inspection - no inspection_id provided');
                 $inspection = Inspection::create(array_merge($request->except(['step', '_token', 'equipment_data']), [
                     'inspection_number' => Inspection::generateInspectionNumber(),
                     'status' => 'draft',
                     'inspection_date' => now()->format('Y-m-d'),
                 ]));
+                \Log::info('Created new inspection', ['inspection_id' => $inspection->id]);
             }
 
-            // Handle equipment data for step 2 (Equipment Details)
-            if ($step == 2) {
-                \Log::info('Step 2 processing - Equipment Details', [
+            // Handle equipment data for step 4 (Equipment Details)
+            if ($step == 4) {
+                \Log::info('Step 4 processing - Equipment Details', [
                     'step' => $step,
                     'inspection_id' => $inspection->id,
                     'equipment_type' => $request->input('equipment_type'),
@@ -365,20 +376,36 @@ class InspectionController extends Controller
                 \Log::info('saveEquipmentDetails completed for inspection ' . $inspection->id);
             }
 
-            // Handle equipment assignments for step 4 (Equipment Assignments)
-            \Log::info('Step 4 processing', [
+            // Handle equipment assignments for step 3 (Equipment Assignments)
+            \Log::info('Step 3 processing', [
                 'step' => $step,
                 'has_equipment_data' => $request->has('equipment_data'),
                 'equipment_data_raw' => $request->input('equipment_data'),
                 'inspection_id' => $inspection->id
             ]);
             
-            if ($step == 4 && $request->has('equipment_data')) {
-                \Log::info('Calling saveEquipmentData for inspection ' . $inspection->id);
-                $this->saveEquipmentData($inspection, $request->input('equipment_data'));
-                \Log::info('saveEquipmentData completed for inspection ' . $inspection->id);
-            } elseif ($step == 4) {
-                \Log::warning('Step 4 but no equipment_data found in request', [
+            if ($step == 3 && $request->has('equipment_data')) {
+                // Check if this is equipment assignments or equipment items based on data structure
+                $testData = json_decode($request->input('equipment_data'), true);
+                $isEquipmentItems = false;
+                
+                if (is_array($testData) && count($testData) > 0) {
+                    $firstItem = $testData[0];
+                    // Equipment items have specific fields like 'description', 'swl', 'reason_for_examination'
+                    $isEquipmentItems = isset($firstItem['description']) || isset($firstItem['swl']) || isset($firstItem['reason_for_examination']);
+                }
+                
+                if ($isEquipmentItems) {
+                    \Log::info('Step 3 processing - Equipment Items Management');
+                    $this->saveInspectionEquipment($inspection, $request->input('equipment_data'));
+                    \Log::info('saveInspectionEquipment completed for inspection ' . $inspection->id);
+                } else {
+                    \Log::info('Step 3 processing - Equipment Assignments');
+                    $this->saveEquipmentAssignments($inspection, $request->input('equipment_data'));
+                    \Log::info('saveEquipmentAssignments completed for inspection ' . $inspection->id);
+                }
+            } elseif ($step == 3) {
+                \Log::warning('Step 3 but no equipment_data found in request', [
                     'all_request_data' => $request->all()
                 ]);
             }
@@ -697,9 +724,6 @@ class InspectionController extends Controller
         ]);
 
         try {
-            // Delete existing equipment assignments for this inspection
-            \App\Models\EquipmentAssignment::where('inspection_id', $inspection->id)->delete();
-
             // Get equipment details if equipment_type is numeric (equipment ID)
             $equipmentName = '';
             $equipmentType = '';
@@ -727,26 +751,210 @@ class InspectionController extends Controller
                 $calibrationStatus = 'not_required';
             }
 
-            // Create new equipment assignment based on step 2 form data
-            $equipmentAssignment = \App\Models\EquipmentAssignment::create([
-                'inspection_id' => $inspection->id,
-                'equipment_id' => is_numeric($request->input('equipment_type')) ? $request->input('equipment_type') : null,
-                'equipment_name' => $equipmentName ?: $request->input('equipment_type'),
-                'equipment_type' => $equipmentType ?: $request->input('equipment_type'),
-                'make_model' => trim(($request->input('equipment_manufacturer') ?: '') . ' ' . ($request->input('equipment_model') ?: '')),
-                'serial_number' => $request->input('equipment_serial'),
-                'last_calibration_date' => $request->input('equipment_cert_date') ?: null,
-                'next_calibration_date' => $request->input('equipment_next_due') ?: null,
-                'calibration_status' => $calibrationStatus,
-                'condition' => strtolower($request->input('equipment_status')) ?: 'good',
-                'assigned_services' => $assignedServices,
-                'notes' => $request->input('equipment_comments')
-            ]);
+            // Generate equipment_id - use database ID if numeric, otherwise generate unique ID
+            $equipmentId = is_numeric($request->input('equipment_type')) 
+                ? $request->input('equipment_type') 
+                : 'MANUAL-' . strtoupper(substr(str_replace(' ', '', $request->input('equipment_type')), 0, 6)) . '-' . time();
+
+            // Update or create equipment assignment based on step 4 form data
+            $equipmentAssignment = \App\Models\EquipmentAssignment::updateOrCreate(
+                [
+                    'inspection_id' => $inspection->id,
+                    'equipment_id' => $equipmentId
+                ],
+                [
+                    'equipment_name' => $equipmentName ?: $request->input('equipment_type'),
+                    'equipment_type' => $equipmentType ?: $request->input('equipment_type'),
+                    'make_model' => trim(($request->input('equipment_manufacturer') ?: '') . ' ' . ($request->input('equipment_model') ?: '')),
+                    'serial_number' => $request->input('equipment_serial'),
+                    'last_calibration_date' => $request->input('equipment_cert_date') ?: null,
+                    'next_calibration_date' => $request->input('equipment_next_due') ?: null,
+                    'calibration_status' => $calibrationStatus,
+                    'condition' => strtolower($request->input('equipment_status')) ?: 'good',
+                    'assigned_services' => $assignedServices,
+                    'notes' => $request->input('equipment_comments')
+                ]
+            );
 
             \Log::info('Equipment assignment created', ['id' => $equipmentAssignment->id]);
 
         } catch (\Exception $e) {
             \Log::error('Error saving equipment details', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Save equipment assignments data from step 2 Equipment Assignments table
+     */
+    private function saveEquipmentAssignments($inspection, $equipmentDataJson)
+    {
+        \Log::info('saveEquipmentAssignments called', [
+            'inspection_id' => $inspection->id,
+            'equipmentDataJson' => $equipmentDataJson,
+            'is_empty' => empty($equipmentDataJson),
+            'json_length' => strlen($equipmentDataJson)
+        ]);
+        
+        if (empty($equipmentDataJson)) {
+            \Log::warning('Equipment assignments data is empty, skipping save');
+            return;
+        }
+
+        $equipmentData = json_decode($equipmentDataJson, true);
+        \Log::info('Decoded equipment assignments data', [
+            'is_array' => is_array($equipmentData),
+            'count' => is_array($equipmentData) ? count($equipmentData) : 0,
+            'json_decode_error' => json_last_error_msg(),
+            'raw_first_item' => is_array($equipmentData) && count($equipmentData) > 0 ? $equipmentData[0] : 'N/A'
+        ]);
+        
+        if (!is_array($equipmentData)) {
+            \Log::error('Equipment assignments data is not an array after JSON decode');
+            return;
+        }
+
+        try {
+            // Clear existing equipment assignments for this inspection
+            $deletedCount = \App\Models\EquipmentAssignment::where('inspection_id', $inspection->id)->count();
+            \App\Models\EquipmentAssignment::where('inspection_id', $inspection->id)->delete();
+            \Log::info('Cleared existing equipment assignment records', ['deleted_count' => $deletedCount]);
+
+            // Save new equipment assignments
+            $createdCount = 0;
+            foreach ($equipmentData as $index => $item) {
+                \Log::info('Creating equipment assignment record', ['index' => $index, 'item' => $item]);
+                \Log::info('Item equipment_name field', [
+                    'equipment_name' => $item['equipment_name'] ?? 'NOT_SET',
+                    'is_null' => is_null($item['equipment_name'] ?? null),
+                    'is_empty' => empty($item['equipment_name'] ?? ''),
+                    'length' => strlen($item['equipment_name'] ?? ''),
+                    'raw_value' => var_export($item['equipment_name'] ?? null, true)
+                ]);
+                \Log::info('Item equipment_type field', ['equipment_type' => $item['equipment_type'] ?? 'NOT_SET']);
+                
+                // Validate required fields - skip if no meaningful data
+                $hasEquipmentId = !empty($item['equipment_id']);
+                $hasSerialNumber = !empty($item['serial_number']);
+                $hasDescription = !empty($item['description']);
+                
+                if (!$hasEquipmentId && !$hasSerialNumber && !$hasDescription) {
+                    \Log::warning('Equipment assignment skipped - no meaningful data', [
+                        'index' => $index, 
+                        'item' => $item,
+                        'has_equipment_id' => $hasEquipmentId,
+                        'has_serial_number' => $hasSerialNumber,
+                        'has_description' => $hasDescription
+                    ]);
+                    continue;
+                }
+                
+                // If we don't have equipment_id but have other data, we need to create one
+                if (empty($item['equipment_id'])) {
+                    $item['equipment_id'] = 'MANUAL-ENTRY-' . time() . '-' . $index;
+                    \Log::info('Generated equipment_id for entry without selection', ['generated_id' => $item['equipment_id']]);
+                }
+
+                // Get equipment details if equipment_id is numeric (from database)
+                $equipmentName = $item['equipment_name'] ?? '';
+                $equipmentType = $item['equipment_type'] ?? '';
+                
+                if (is_numeric($item['equipment_id'])) {
+                    $equipment = \App\Models\Equipment::find($item['equipment_id']);
+                    if ($equipment) {
+                        $equipmentName = $equipment->name;
+                        $equipmentType = $equipment->type;
+                    } else {
+                        // Equipment not found in database, generate fallback name
+                        $equipmentName = $equipmentName ?: 'Equipment ID: ' . $item['equipment_id'];
+                        $equipmentType = $equipmentType ?: 'unknown';
+                    }
+                } else {
+                    // Manual equipment ID, ensure we have a name
+                    if (empty($equipmentName)) {
+                        // Try to use description, serial number, or fallback
+                        if (!empty($item['description'])) {
+                            $equipmentName = substr($item['description'], 0, 50);
+                        } elseif (!empty($item['serial_number'])) {
+                            $equipmentName = 'Equipment S/N: ' . $item['serial_number'];
+                        } else {
+                            $equipmentName = 'Manual Equipment Entry';
+                        }
+                    }
+                    $equipmentType = $equipmentType ?: 'manual';
+                }
+
+                // Final safety check - ensure we have a name
+                if (empty($equipmentName)) {
+                    $equipmentName = 'Equipment Assignment #' . ($index + 1);
+                    \Log::warning('Using final fallback name', ['fallback_name' => $equipmentName]);
+                }
+                
+                // Debug final values before database insertion
+                \Log::info('Final values before database insert', [
+                    'equipment_name' => $equipmentName,
+                    'equipment_type' => $equipmentType,
+                    'equipment_name_is_null' => is_null($equipmentName),
+                    'equipment_name_is_empty' => empty($equipmentName),
+                    'equipment_name_length' => strlen($equipmentName)
+                ]);
+                
+                // Determine assigned services based on equipment
+                $assignedServices = $this->getServicesForEquipment($equipmentName ?: $equipmentType);
+
+                // Determine calibration status
+                $calibrationStatus = 'not_required';
+                if (!empty($item['next_calibration_date'])) {
+                    $nextDue = \Carbon\Carbon::parse($item['next_calibration_date']);
+                    if ($nextDue->isPast()) {
+                        $calibrationStatus = 'overdue';
+                    } elseif ($nextDue->diffInDays(now()) <= 30) {
+                        $calibrationStatus = 'due_soon';
+                    } else {
+                        $calibrationStatus = 'current';
+                    }
+                }
+
+                // Ensure we never pass null values
+                $finalEquipmentName = $equipmentName ?: 'Unknown Equipment';
+                $finalEquipmentType = $equipmentType ?: 'unknown';
+                
+                // Double check for null values
+                if (is_null($finalEquipmentName) || $finalEquipmentName === '') {
+                    $finalEquipmentName = 'Equipment Entry #' . ($index + 1);
+                }
+                
+                \Log::info('About to create database record', [
+                    'equipment_name' => $finalEquipmentName,
+                    'equipment_type' => $finalEquipmentType
+                ]);
+
+                $assignment = \App\Models\EquipmentAssignment::create([
+                    'inspection_id' => $inspection->id,
+                    'equipment_id' => (string) $item['equipment_id'], // Ensure string type
+                    'equipment_name' => $finalEquipmentName,
+                    'equipment_type' => $finalEquipmentType,
+                    'make_model' => $item['make_model'] ?? '',
+                    'serial_number' => $item['serial_number'] ?? '',
+                    'condition' => strtolower($item['condition'] ?? 'good'),
+                    'calibration_status' => $calibrationStatus,
+                    'last_calibration_date' => !empty($item['last_calibration_date']) ? $item['last_calibration_date'] : null,
+                    'next_calibration_date' => !empty($item['next_calibration_date']) ? $item['next_calibration_date'] : null,
+                    'assigned_services' => $assignedServices,
+                    'notes' => $item['notes'] ?? ''
+                ]);
+                
+                $createdCount++;
+                \Log::info('Created equipment assignment record', ['id' => $assignment->id, 'equipment_name' => $assignment->equipment_name]);
+            }
+            
+            \Log::info('Equipment assignments save completed', ['created_count' => $createdCount]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error saving equipment assignments', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -810,6 +1018,97 @@ class InspectionController extends Controller
         
         // Default: return empty array if no specific service match
         return [];
+    }
+
+    /**
+     * Save inspection equipment data to inspection_equipment table (Step 4)
+     */
+    private function saveInspectionEquipment($inspection, $equipmentDataJson)
+    {
+        \Log::info('saveInspectionEquipment called', [
+            'inspection_id' => $inspection->id,
+            'equipmentDataJson' => $equipmentDataJson,
+            'is_empty' => empty($equipmentDataJson),
+            'json_length' => strlen($equipmentDataJson)
+        ]);
+        
+        if (empty($equipmentDataJson)) {
+            \Log::warning('Inspection equipment data is empty, skipping save');
+            return;
+        }
+
+        $equipmentData = json_decode($equipmentDataJson, true);
+        \Log::info('Decoded inspection equipment data', [
+            'is_array' => is_array($equipmentData),
+            'count' => is_array($equipmentData) ? count($equipmentData) : 0,
+            'json_decode_error' => json_last_error_msg(),
+            'raw_first_item' => is_array($equipmentData) && count($equipmentData) > 0 ? $equipmentData[0] : 'N/A'
+        ]);
+        
+        if (!is_array($equipmentData)) {
+            \Log::error('Inspection equipment data is not an array after JSON decode');
+            return;
+        }
+
+        try {
+            // Clear existing equipment items for this inspection
+            $deletedCount = \App\Models\InspectionEquipment::where('inspection_id', $inspection->id)
+                ->where('category', 'item')
+                ->count();
+            \App\Models\InspectionEquipment::where('inspection_id', $inspection->id)
+                ->where('category', 'item')
+                ->delete();
+            \Log::info('Cleared existing inspection equipment items', ['deleted_count' => $deletedCount]);
+
+            // Save new equipment items
+            $createdCount = 0;
+            foreach ($equipmentData as $index => $item) {
+                \Log::info('Creating inspection equipment record', ['index' => $index, 'item' => $item]);
+                
+                // Map form fields to database fields
+                $equipmentItem = [
+                    'inspection_id' => $inspection->id,
+                    'client_id' => $inspection->client_id,
+                    'category' => 'item',
+                    'equipment_type' => $item['equipment_type'] ?? '',
+                    'serial_number' => $item['serial_number'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'reason_for_examination' => $item['reason_for_examination'] ?? '',
+                    'model' => $item['model'] ?? '',
+                    'swl' => !empty($item['swl']) ? floatval($item['swl']) : null,
+                    'test_load_applied' => !empty($item['test_load_applied']) ? floatval($item['test_load_applied']) : null,
+                    'date_of_manufacture' => !empty($item['date_of_manufacture']) ? $item['date_of_manufacture'] : null,
+                    'date_of_last_examination' => !empty($item['date_of_last_examination']) ? $item['date_of_last_examination'] : null,
+                    'date_of_next_examination' => !empty($item['date_of_next_examination']) ? $item['date_of_next_examination'] : null,
+                    'status' => $item['status'] ?? 'active',
+                    'condition' => $item['condition'] ?? 'good',
+                    'remarks' => $item['remarks'] ?? '',
+                    'metadata' => json_encode([
+                        'temp_id' => $item['temp_id'] ?? null,
+                        'equipment_id' => $item['equipment_id'] ?? null,
+                        'equipment_name' => $item['equipment_name'] ?? ''
+                    ])
+                ];
+
+                \Log::info('Creating InspectionEquipment with data', $equipmentItem);
+                $equipment = \App\Models\InspectionEquipment::create($equipmentItem);
+                $createdCount++;
+                \Log::info('InspectionEquipment created', ['id' => $equipment->id]);
+            }
+
+            \Log::info('saveInspectionEquipment completed', [
+                'inspection_id' => $inspection->id,
+                'items_processed' => count($equipmentData),
+                'items_created' => $createdCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error saving inspection equipment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**

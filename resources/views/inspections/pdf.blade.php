@@ -540,6 +540,34 @@
     </table>
     @endif
 
+    <!-- Step 5: Consumables & Materials -->
+    <div class="section-title">STEP 5: CONSUMABLES & MATERIALS</div>
+    
+    @if($inspection->consumableAssignments && $inspection->consumableAssignments->count() > 0)
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 30%;">Consumable Name</th>
+                <th style="width: 20%;">Type</th>
+                <th style="width: 15%;">Quantity</th>
+                <th style="width: 35%;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($inspection->consumableAssignments as $assignment)
+            <tr>
+                <td>{{ $assignment->consumable->name ?? 'N/A' }}</td>
+                <td>{{ $assignment->consumable->type ?? 'N/A' }}</td>
+                <td>{{ $assignment->quantity ?? 'N/A' }}</td>
+                <td>{{ $assignment->notes ?? '-' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @else
+    <p class="no-data">No consumables assigned for this inspection.</p>
+    @endif
+
     <!-- Lifting Examination Details -->
     @if($inspection->liftingExamination)
     <div class="section-title">LIFTING EXAMINATION - QUESTIONS & ANSWERS</div>
@@ -617,10 +645,10 @@
             <td>{{ $inspection->mpiInspection->ink_powder_1_method_name ?? 'N/A' }}</td>
         </tr>
         <tr>
-            <td class="info-label">Current Flow:</td>
-            <td>{{ $inspection->mpiInspection->current_flow_name ?? 'N/A' }}</td>
             <td class="info-label">Magnetic Flow:</td>
             <td>{{ $inspection->mpiInspection->magnetic_flow_name ?? 'N/A' }}</td>
+            <td class="info-label">Current Flow:</td>
+            <td>{{ $inspection->mpiInspection->current_flow_name ?? 'N/A' }}</td>
         </tr>
         <tr>
             <td class="info-label">Ink/Powder 1 Carrier:</td>
@@ -661,8 +689,8 @@
     </table>
     @endif
 
-    <!-- Step 5: Test Results & Inspection Details -->
-    <div class="section-title">STEP 5: TEST RESULTS & INSPECTION DETAILS</div>
+    <!-- Step 6: Test Results & Inspection Details -->
+    <div class="section-title">STEP 6: TEST RESULTS & INSPECTION DETAILS</div>
     
     <table class="info-table">
         <tr>
@@ -731,12 +759,12 @@
         @endif
     </table>
 
-    <!-- Step 6: Images & Documentation -->
+    <!-- Step 7: Images & Documentation -->
 
 
-    <!-- Step 6: Inspection Images -->
+    <!-- Step 7: Inspection Images -->
     @if($inspection->images && count($inspection->images) > 0)
-    <div class="section-title">STEP 6: INSPECTION IMAGES</div>
+    <div class="section-title">STEP 7: INSPECTION IMAGES</div>
     
     @php $imageCount = 0; @endphp
     @foreach($inspection->images as $image)

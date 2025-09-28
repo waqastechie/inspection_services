@@ -1435,7 +1435,7 @@ Route::middleware('auth')->group(function () {
         // Wizard Routes
         Route::prefix('wizard')->name('wizard.')->group(function () {
             Route::get('/step/{step?}/{inspection?}', [InspectionController::class, 'createWizard'])->name('step');
-            Route::post('/save', [InspectionController::class, 'saveWizardStep'])->name('save');
+            Route::post('/save/{inspection?}', [InspectionController::class, 'saveWizardStep'])->name('save');
             Route::post('/link-items', [InspectionController::class, 'linkItemsToEquipment'])->name('link-items');
         });
         

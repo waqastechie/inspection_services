@@ -75,11 +75,12 @@
                 <label class="form-label fw-semibold">
                     Current Flow <span class="text-danger">*</span>
                 </label>
-                <select class="form-select" name="current_flow" data-mpi-required="true">
+                <select class="form-select" name="magnetic_flow" data-mpi-required="true">
                     <option value="">Select Current Flow...</option>
-                    <option value="longitudinal">Longitudinal</option>
-                    <option value="circular">Circular</option>
-                    <option value="multidirectional">Multidirectional</option>
+                    <option value="ac">AC (Alternating Current)</option>
+                    <option value="dc">DC (Direct Current)</option>
+                    <option value="pulsed_dc">Pulsed DC</option>
+                    <option value="three_phase">Three Phase AC</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -107,12 +108,11 @@
                 <label class="form-label fw-semibold">
                     Magnetic Flow <span class="text-danger">*</span>
                 </label>
-                <select class="form-select" name="magnetic_flow" data-mpi-required="true">
-                    <option value="">Select Flow...</option>
-                    <option value="ac">AC (Alternating Current)</option>
-                    <option value="dc">DC (Direct Current)</option>
-                    <option value="pulsed_dc">Pulsed DC</option>
-                    <option value="three_phase">Three Phase AC</option>
+                <select class="form-select" name="current_flow" data-mpi-required="true">
+                    <option value="">Select Magnetic Flow...</option>
+                    <option value="longitudinal">Longitudinal</option>
+                    <option value="circular">Circular</option>
+                    <option value="multidirectional">Multidirectional</option>
                 </select>
             </div>
             <div class="col-md-4">
