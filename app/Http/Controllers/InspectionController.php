@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use App\Models\Inspection;
 use App\Models\InspectionService;
@@ -478,21 +479,57 @@ class InspectionController extends Controller
 
     public function generatePDF($id)
     {
-        $inspection = Inspection::with([
-            'client',
-            'services',
-            'personnelAssignments',
-            'equipmentAssignments',
-            'consumableAssignments',
-            'inspectionResults',
-            'images'
-        ])->findOrFail($id);
+        try {
+            $inspection = Inspection::with([
+                'client',
+                'services',
+                'personnelAssignments.personnel',
+                'equipmentAssignments.equipment',
+                'consumableAssignments.consumable',
+                'inspectionResults',
+                'images',
+                'qaReviewer',
+                'liftingExaminationInspector',
+                'loadTestInspector',
+                'thoroughExaminationInspector',
+                'mpiServiceInspector',
+                'visualInspector',
+                'inspectionEquipment',
+                'creator',
+                'completedBy',
+                'liftingExamination',
+                'mpiInspection'
+            ])->findOrFail($id);
 
-        // For now, return a simple response
-        return response()->json([
-            'message' => 'PDF generation not yet implemented',
-            'inspection_id' => $id
-        ]);
+            // Load the PDF view
+            $pdf = Pdf::loadView('inspections.pdf', compact('inspection'));
+            
+            // Set paper size and orientation
+            $pdf->setPaper('A4', 'portrait');
+            
+            // Set options for better rendering
+            $pdf->setOptions([
+                'dpi' => 150,
+                'defaultFont' => 'sans-serif',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => false, // Disabled for security
+                'debugKeepTemp' => false,
+                'chroot' => public_path(), // Restrict file access
+                'logOutputFile' => storage_path('logs/dompdf.log'),
+            ]);
+
+            // Generate filename
+            $filename = 'inspection_report_' . $inspection->inspection_number . '_' . now()->format('Y-m-d') . '.pdf';
+
+            // Return PDF download
+            return $pdf->download($filename);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function previewPDF($id)
@@ -500,11 +537,22 @@ class InspectionController extends Controller
         $inspection = Inspection::with([
             'client',
             'services',
-            'personnelAssignments',
-            'equipmentAssignments',
-            'consumableAssignments',
+            'personnelAssignments.personnel',
+            'equipmentAssignments.equipment',
+            'consumableAssignments.consumable',
             'inspectionResults',
-            'images'
+            'images',
+            'qaReviewer',
+            'liftingExaminationInspector',
+            'loadTestInspector',
+            'thoroughExaminationInspector',
+            'mpiServiceInspector',
+            'visualInspector',
+            'inspectionEquipment',
+            'creator',
+            'completedBy',
+            'liftingExamination',
+            'mpiInspection'
         ])->findOrFail($id);
 
         return view('inspections.pdf-preview', compact('inspection'));
