@@ -87,7 +87,19 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">Created:</td>
-                                    <td>{{ $inspection->created_at->format('M d, Y') }} ({{ $inspection->created_at->diffForHumans() }})</td>
+                                    <td>
+                                        @php
+                                            $createdAt = $inspection->created_at;
+                                            if (is_string($createdAt)) {
+                                                $createdAt = \Carbon\Carbon::parse($createdAt);
+                                            }
+                                        @endphp
+                                        @if($createdAt && $createdAt instanceof \Carbon\Carbon)
+                                            {{ $createdAt->format('M d, Y') }} ({{ $createdAt->diffForHumans() }})
+                                        @else
+                                            {{ $inspection->created_at ?? 'Not set' }}
+                                        @endif
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -144,13 +156,13 @@
                                 <div class="form-text">Optional comments about the inspection quality and completeness.</div>
                             </div>
 
-                            <!-- Rejection Reason (shown when rejecting) -->
-                            <div class="mb-3" id="rejectionReasonSection" style="display: none;">
+                            <!-- Rejection Reason (always visible) -->
+                            <div class="mb-3" id="rejectionReasonSection">
                                 <label for="qa_rejection_reason" class="form-label fw-bold">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>Rejection Reason <span class="text-danger">*</span>
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Reason <span class="text-danger">*</span>
                                 </label>
-                                <textarea class="form-control" id="qa_rejection_reason" name="qa_rejection_reason" rows="3" 
-                                          placeholder="Specify the reason for rejection..."></textarea>
+                                <textarea class="form-control" id="qa_rejection_reason" name="qa_rejection_reason" rows="3"
+                                          placeholder="Specify the reason for rejection or revision request..."></textarea>
                                 <div class="form-text">Required when rejecting or requesting revision.</div>
                             </div>
 
@@ -176,7 +188,13 @@
                             <h6>{{ $inspection->qa_status_name }}</h6>
                             @if($inspection->qaReviewer)
                                 <p class="text-muted">Reviewed by: {{ $inspection->qaReviewer->name }}</p>
-                                <p class="text-muted">{{ $inspection->qa_reviewed_at->format('M d, Y \a\t g:i A') }}</p>
+                                <p class="text-muted">
+                                    @if($inspection->qa_reviewed_at instanceof \Carbon\Carbon)
+                                        {{ $inspection->qa_reviewed_at->format('M d, Y \a\t g:i A') }}
+                                    @else
+                                        {{ $inspection->qa_reviewed_at ?? 'Not set' }}
+                                    @endif
+                                </p>
                             @endif
                             @if($inspection->qa_comments)
                                 <div class="mt-3">
@@ -215,7 +233,12 @@
                                     <h6 class="timeline-title">{{ $inspection->qa_status_name }}</h6>
                                     <p class="timeline-description">
                                         Reviewed by {{ $inspection->qaReviewer->name ?? 'Unknown' }} 
-                                        on {{ $inspection->qa_reviewed_at->format('M d, Y \a\t g:i A') }}
+                                        on 
+                                        @if($inspection->qa_reviewed_at instanceof \Carbon\Carbon)
+                                            {{ $inspection->qa_reviewed_at->format('M d, Y \a\t g:i A') }}
+                                        @else
+                                            {{ $inspection->qa_reviewed_at ?? 'Not set' }}
+                                        @endif
                                     </p>
                                     @if($inspection->qa_comments)
                                         <div class="timeline-comments">
@@ -303,18 +326,14 @@
 <script>
     let currentAction = '';
     
-    function submitQADecision(action) {
+    window.submitQADecision = function(action) {
         currentAction = action;
         
-        // Show/hide rejection reason field
-        const rejectionSection = document.getElementById('rejectionReasonSection');
+        // Rejection reason field is always visible; only set required for reject/revision
         const rejectionInput = document.getElementById('qa_rejection_reason');
-        
         if (action === 'reject' || action === 'revision') {
-            rejectionSection.style.display = 'block';
             rejectionInput.required = true;
         } else {
-            rejectionSection.style.display = 'none';
             rejectionInput.required = false;
         }
         
@@ -361,37 +380,57 @@
         
         // Submit the form
         const formData = new FormData(document.getElementById('qaReviewForm'));
-        const submitUrl = currentAction === 'approve' ? 
-            '{{ route("qa.approve", $inspection) }}' : 
-            (currentAction === 'revision' ? 
-                '{{ route("qa.request-revision", $inspection) }}' : 
-                '{{ route("qa.reject", $inspection) }}');
+        let submitUrl = '';
+        if (currentAction === 'approve') {
+            submitUrl = '/qa/approve/{{ $inspection->id }}';
+        } else if (currentAction === 'revision') {
+            submitUrl = '/qa/request-revision/{{ $inspection->id }}';
+        } else if (currentAction === 'reject') {
+            submitUrl = '/qa/reject/{{ $inspection->id }}';
+        }
         
+        // Debug: Log the URL being used
+        console.log('Submitting to URL:', submitUrl);
+        console.log('Action:', currentAction);
+
         // Show loading state
         const confirmBtn = document.getElementById('confirmActionBtn');
         const originalText = confirmBtn.textContent;
         confirmBtn.textContent = 'Processing...';
         confirmBtn.disabled = true;
+
+        // Create a temporary form for submission
+        const tempForm = document.createElement('form');
+        tempForm.method = 'POST';
+        tempForm.action = submitUrl;
         
-        fetch(submitUrl, {
-            method: 'PATCH',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '{{ route("qa.dashboard") }}';
-            } else {
-                throw new Error('Request failed');
-            }
-        })
-        .catch(error => {
-            alert('An error occurred. Please try again.');
-            confirmBtn.textContent = originalText;
-            confirmBtn.disabled = false;
-        });
+        // Add CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        tempForm.appendChild(csrfInput);
+        
+        // Add method spoofing for PATCH
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'PATCH';
+        tempForm.appendChild(methodInput);
+        
+        // Add form data (fix duplicate declaration)
+        const qaFormData = new FormData(document.getElementById('qaReviewForm'));
+        for (let [key, value] of qaFormData.entries()) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            tempForm.appendChild(input);
+        }
+        
+        // Submit form
+        document.body.appendChild(tempForm);
+        tempForm.submit();
     });
     
     // Auto-save draft comments

@@ -104,6 +104,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has one of the specified roles
+     */
+    public function hasRole($roles): bool
+    {
+        $roles = is_array($roles) ? $roles : [$roles];
+        return in_array($this->role, $roles);
+    }
+
+    /**
      * Get role color for badges
      */
     public function getRoleColorAttribute(): string

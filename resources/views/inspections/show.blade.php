@@ -1584,6 +1584,108 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Comments Section -->
+        <div class="col-12">
+            <div class="card border-info mb-4">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>
+                        Comments & Communication
+                    </h4>
+                    <small class="badge bg-light text-info" id="commentCount">
+                        {{ $inspection->activeComments->count() }} comments
+                    </small>
+                </div>
+                <div class="card-body">
+                    <!-- Comment Timeline -->
+                    <div id="commentsTimeline" class="mb-4">
+                        @forelse($inspection->activeComments as $comment)
+                            <div class="comment-item mb-3 p-3 border rounded" id="comment-{{ $comment->id }}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="comment-avatar me-3">
+                                            <i class="fas fa-user-circle fa-2x text-{{ $comment->type_color }}"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-{{ $comment->type_color }}">{{ $comment->user->name }}</strong>
+                                            <span class="badge bg-{{ $comment->type_color }} ms-2">{{ $comment->user->role }}</span>
+                                            <small class="text-muted d-block">
+                                                <i class="{{ $comment->type_icon }} me-1"></i>
+                                                {{ $comment->formatted_type }} • {{ $comment->created_at->format('M j, Y g:i A') }}
+                                                @if(isset($comment->metadata['edited_at']))
+                                                    <span class="text-warning">(edited)</span>
+                                                @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                    @if(auth()->user()->id === $comment->user_id || auth()->user()->hasRole(['super_admin', 'admin']))
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" onclick="editComment({{ $comment->id }})">
+                                                    <i class="fas fa-edit me-2"></i>Edit
+                                                </a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteComment({{ $comment->id }})">
+                                                    <i class="fas fa-trash me-2"></i>Delete
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="comment-content">
+                                    <p class="mb-0">{{ $comment->comment }}</p>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center text-muted py-4" id="noCommentsMessage">
+                                <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                                <p class="mb-0">No comments yet. Be the first to start the conversation!</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    
+                    <!-- Add Comment Form -->
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <form id="addCommentForm">
+                                @csrf
+                                <div class="row">
+                                    <div class="col-md-9">
+                                        <div class="form-group mb-3">
+                                            <label for="commentType" class="form-label">Comment Type</label>
+                                            <select class="form-select" id="commentType" name="comment_type">
+                                                <option value="general">General Comment</option>
+                                                @if(auth()->user()->hasRole(['qa', 'admin', 'super_admin']))
+                                                    <option value="qa_review">QA Review</option>
+                                                @endif
+                                                @if(auth()->user()->hasRole(['inspector']) && $inspection->requiresRevision())
+                                                    <option value="revision_response">Revision Response</option>
+                                                @endif
+                                            </select>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label for="commentText" class="form-label">Your Comment</label>
+                                            <textarea class="form-control" id="commentText" name="comment" rows="3" 
+                                                    placeholder="Add your comment or question here..." required></textarea>
+                                            <div class="form-text">Maximum 2000 characters</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100" id="submitCommentBtn">
+                                            <i class="fas fa-paper-plane me-2"></i>
+                                            Post Comment
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1812,7 +1914,267 @@ html {
         font-size: 1.1rem;
     }
 }
+
+/* Comments Section Styles */
+.comment-item {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.comment-item:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6 !important;
+    transform: translateX(5px);
+}
+
+.comment-avatar {
+    flex-shrink: 0;
+}
+
+.comment-content {
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.comment-item .dropdown-toggle {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.comment-item:hover .dropdown-toggle {
+    opacity: 1;
+}
+
+#commentsTimeline {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+#commentsTimeline::-webkit-scrollbar {
+    width: 6px;
+}
+
+#commentsTimeline::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#commentsTimeline::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+#commentsTimeline::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.comment-item::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background-color 0.3s ease;
+}
+
+.comment-item:hover::before {
+    background: var(--bs-info);
+}
 </style>
+@endpush
+
+@push('scripts')
+<script>
+function quickQAAction(action) {
+    // Redirect to QA review page for the action
+    if (action === 'approve' || action === 'revision') {
+        window.location.href = '/qa/review/{{ $inspection->id }}';
+    }
+}
+
+// Comments functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const addCommentForm = document.getElementById('addCommentForm');
+    const commentsTimeline = document.getElementById('commentsTimeline');
+    const commentCount = document.getElementById('commentCount');
+    const noCommentsMessage = document.getElementById('noCommentsMessage');
+    
+    // Handle form submission
+    addCommentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = document.getElementById('submitCommentBtn');
+        const originalText = submitBtn.innerHTML;
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Posting...';
+        
+        fetch('{{ route("inspections.comments.store", $inspection->id) }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add new comment to timeline
+                addCommentToTimeline(data.comment);
+                
+                // Reset form
+                document.getElementById('commentText').value = '';
+                document.getElementById('commentType').selectedIndex = 0;
+                
+                // Update comment count
+                updateCommentCount(1);
+                
+                // Hide no comments message if visible
+                if (noCommentsMessage && !noCommentsMessage.classList.contains('d-none')) {
+                    noCommentsMessage.style.display = 'none';
+                }
+                
+                // Show success message
+                showAlert('Comment posted successfully!', 'success');
+            } else {
+                showAlert(data.message || 'Failed to post comment', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('An error occurred while posting the comment', 'danger');
+        })
+        .finally(() => {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+});
+
+function addCommentToTimeline(comment) {
+    const commentsTimeline = document.getElementById('commentsTimeline');
+    const noCommentsMessage = document.getElementById('noCommentsMessage');
+    
+    // Hide no comments message if it exists
+    if (noCommentsMessage) {
+        noCommentsMessage.style.display = 'none';
+    }
+    
+    // Create comment HTML
+    const commentHtml = `
+        <div class="comment-item mb-3 p-3 border rounded" id="comment-${comment.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center">
+                    <div class="comment-avatar me-3">
+                        <i class="fas fa-user-circle fa-2x text-${comment.type_color}"></i>
+                    </div>
+                    <div>
+                        <strong class="text-${comment.type_color}">${comment.user.name}</strong>
+                        <span class="badge bg-${comment.type_color} ms-2">${comment.user.role}</span>
+                        <small class="text-muted d-block">
+                            <i class="${comment.type_icon} me-1"></i>
+                            ${comment.formatted_type} • ${comment.created_at}
+                        </small>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="editComment(${comment.id})">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteComment(${comment.id})">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="comment-content">
+                <p class="mb-0">${comment.comment}</p>
+            </div>
+        </div>
+    `;
+    
+    // Add to timeline
+    commentsTimeline.insertAdjacentHTML('beforeend', commentHtml);
+    
+    // Scroll to new comment
+    const newComment = document.getElementById(`comment-${comment.id}`);
+    newComment.scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateCommentCount(change) {
+    const commentCount = document.getElementById('commentCount');
+    if (commentCount) {
+        const currentCount = parseInt(commentCount.textContent.match(/\d+/)[0]);
+        const newCount = currentCount + change;
+        commentCount.textContent = `${newCount} comments`;
+    }
+}
+
+function editComment(commentId) {
+    // Implement edit functionality
+    showAlert('Edit functionality coming soon!', 'info');
+}
+
+function deleteComment(commentId) {
+    if (confirm('Are you sure you want to delete this comment?')) {
+        fetch(`{{ route("inspections.comments.store", $inspection->id) }}`.replace('/comments', `/comments/${commentId}`), {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove comment from timeline
+                const commentElement = document.getElementById(`comment-${commentId}`);
+                if (commentElement) {
+                    commentElement.remove();
+                    updateCommentCount(-1);
+                }
+                showAlert('Comment deleted successfully!', 'success');
+            } else {
+                showAlert(data.message || 'Failed to delete comment', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('An error occurred while deleting the comment', 'danger');
+        });
+    }
+}
+
+function showAlert(message, type) {
+    // Create alert element
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(alert);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alert && alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
 @endpush
 
 @endsection

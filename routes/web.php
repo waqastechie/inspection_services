@@ -1,8 +1,8 @@
 <?php
 
-
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InspectionController;
+use App\Http\Controllers\InspectionCommentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PersonnelController;
@@ -11,6 +11,11 @@ use App\Http\Controllers\ConsumableController;
 use App\Http\Controllers\ClientController;
 use App\Models\Client;
 use App\Models\Inspection;
+
+// Authentication Routes
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Client Portal - Only for users with 'client' role
 Route::middleware(['auth', 'verified'])->prefix('client')->name('client.')->group(function () {
@@ -52,8 +57,7 @@ Route::get('/test-db', function () {
     }
 });
 
-// API Routes for dynamic loading (accessibl        
-        // Inspection routesthentication)
+// API Routes for dynamic loading
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('clients', [ClientController::class, 'getClients'])->name('clients');
     Route::get('clients/{id}', [ClientController::class, 'getClientData'])->name('clients.data');
@@ -62,15 +66,6 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('consumables', [ConsumableController::class, 'getConsumables'])->name('consumables');
     Route::get('equipment-types', [InspectionController::class, 'getEquipmentTypes'])->name('equipment-types');
 });
-    // API Routes for dynamic loading (accessible for authentication)
-    Route::prefix('api')->name('api.')->group(function () {
-        Route::get('clients', [ClientController::class, 'getClients'])->name('clients');
-        Route::get('clients/{id}', [ClientController::class, 'getClientData'])->name('clients.data');
-        Route::get('personnel', [PersonnelController::class, 'getPersonnel'])->name('personnel');
-        Route::get('equipment', [EquipmentController::class, 'getEquipment'])->name('equipment');
-        Route::get('consumables', [ConsumableController::class, 'getConsumables'])->name('consumables');
-        Route::get('equipment-types', [InspectionController::class, 'getEquipmentTypes'])->name('equipment-types');
-    });
 
 // Create test user route (temporary for debugging)
 Route::get('/create-test-user', function () {
@@ -1418,10 +1413,13 @@ Route::get('/create-test-data', function () {
     }
 });
 
-// Authentication Routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Notification Routes
+Route::middleware('auth')->group(function () {
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+    Route::delete('/notifications/{id}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
+});
 
 // Protected Routes
 Route::middleware('auth')->group(function () {
@@ -1453,6 +1451,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/{id}', [InspectionController::class, 'show'])->name('show');
         Route::get('/{id}/pdf', [InspectionController::class, 'generatePDF'])->name('pdf');
         Route::get('/{id}/preview-pdf', [InspectionController::class, 'previewPDF'])->name('preview-pdf');
+        
+        // Comments
+        Route::get('/{inspection}/comments', [InspectionCommentController::class, 'index'])->name('comments.index');
+        Route::post('/{inspection}/comments', [InspectionCommentController::class, 'store'])->name('comments.store');
+        Route::put('/{inspection}/comments/{comment}', [InspectionCommentController::class, 'update'])->name('comments.update');
+        Route::delete('/{inspection}/comments/{comment}', [InspectionCommentController::class, 'destroy'])->name('comments.destroy');
         
         // QA Management
         Route::patch('/{id}/complete', [InspectionController::class, 'markAsCompleted'])->name('complete');

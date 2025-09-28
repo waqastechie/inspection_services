@@ -347,6 +347,17 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{{ route('notifications.index') }}">
+                            <i class="fas fa-bell me-1"></i> Notifications
+                            @php
+                                $unreadCount = auth()->user()->unreadNotifications()->count();
+                            @endphp
+                            @if($unreadCount > 0)
+                                <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">{{ $unreadCount }}</span>
+                            @endif
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
                            data-bs-toggle="dropdown" aria-expanded="false">

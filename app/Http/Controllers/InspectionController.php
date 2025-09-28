@@ -169,6 +169,9 @@ class InspectionController extends Controller
 
             DB::commit();
 
+            // Send notifications to QA users and super admin
+            $this->sendInspectionCreatedNotifications($inspection);
+
             return redirect()->route('inspections.show', $inspection->id)
                 ->with('success', 'Inspection submitted for QA successfully! Report Number: ' . $inspection->inspection_number);
 
@@ -1052,8 +1055,20 @@ class InspectionController extends Controller
     }
 
     /**
-     * API endpoint to get equipment types
+     * Send notifications when an inspection is created
      */
+    private function sendInspectionCreatedNotifications(Inspection $inspection)
+    {
+        // Get QA users and super admin
+        $recipients = User::whereIn('role', ['qa', 'super_admin'])
+            ->where('is_active', true)
+            ->get();
+
+        // Send notification to each recipient
+        foreach ($recipients as $recipient) {
+            $recipient->notify(new \App\Notifications\InspectionCreated($inspection));
+        }
+    }
     public function getEquipmentTypes()
     {
         try {

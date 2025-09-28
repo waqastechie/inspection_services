@@ -102,6 +102,9 @@ class Inspection extends Model
         'next_inspection_date' => 'date',
         'report_date' => 'date',
         'completed_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'qa_reviewed_at' => 'datetime',
         'inspection_images' => 'array',
         'attachments' => 'array',
         'service_notes' => 'array',
@@ -550,6 +553,22 @@ class Inspection extends Model
             'revision_required' => 'Revision Required',
             default => 'Unknown'
         };
+    }
+
+    /**
+     * Get the comments for this inspection
+     */
+    public function comments()
+    {
+        return $this->hasMany(InspectionComment::class)->with('user')->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Get active comments only
+     */
+    public function activeComments()
+    {
+        return $this->comments()->active();
     }
 
     // NO OTHER IMAGE METHODS - KEEPING IT SIMPLE

@@ -144,15 +144,8 @@ class QAController extends Controller
 
         $inspection->approveQA(auth()->user(), $request->qa_comments);
 
-        // Log the approval activity
-        activity()
-            ->performedOn($inspection)
-            ->causedBy(auth()->user())
-            ->withProperties([
-                'action' => 'qa_approved',
-                'comments' => $request->qa_comments
-            ])
-            ->log('Inspection QA approved');
+        // Send notifications
+        $this->sendInspectionApprovedNotifications($inspection);
 
         return redirect()
             ->route('qa.dashboard')
@@ -179,16 +172,8 @@ class QAController extends Controller
             $request->qa_comments
         );
 
-        // Log the rejection activity
-        activity()
-            ->performedOn($inspection)
-            ->causedBy(auth()->user())
-            ->withProperties([
-                'action' => 'qa_rejected',
-                'reason' => $request->qa_rejection_reason,
-                'comments' => $request->qa_comments
-            ])
-            ->log('Inspection QA rejected');
+        // Send notifications
+        $this->sendInspectionRejectedNotifications($inspection);
 
         return redirect()
             ->route('qa.dashboard')
@@ -215,16 +200,8 @@ class QAController extends Controller
             $request->qa_comments
         );
 
-        // Log the revision request activity
-        activity()
-            ->performedOn($inspection)
-            ->causedBy(auth()->user())
-            ->withProperties([
-                'action' => 'revision_required',
-                'reason' => $request->qa_rejection_reason,
-                'comments' => $request->qa_comments
-            ])
-            ->log('Inspection revision requested');
+        // Send notifications
+        $this->sendInspectionRevisionRequestedNotifications($inspection);
 
         return redirect()
             ->route('qa.dashboard')
@@ -232,8 +209,64 @@ class QAController extends Controller
     }
 
     /**
-     * Show QA history/completed reviews
+     * Send notifications when an inspection is approved
      */
+    private function sendInspectionApprovedNotifications(Inspection $inspection)
+    {
+        // Notify the inspector who created the report
+        if ($inspection->user) {
+            $inspection->user->notify(new \App\Notifications\InspectionApproved($inspection));
+        }
+
+        // Notify admin and super admin users
+        $adminRecipients = User::whereIn('role', ['admin', 'super_admin'])
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($adminRecipients as $recipient) {
+            $recipient->notify(new \App\Notifications\InspectionApproved($inspection));
+        }
+    }
+
+    /**
+     * Send notifications when an inspection is rejected
+     */
+    private function sendInspectionRejectedNotifications(Inspection $inspection)
+    {
+        // Notify the inspector who created the report
+        if ($inspection->user) {
+            $inspection->user->notify(new \App\Notifications\InspectionRejected($inspection));
+        }
+
+        // Notify admin and super admin users
+        $adminRecipients = User::whereIn('role', ['admin', 'super_admin'])
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($adminRecipients as $recipient) {
+            $recipient->notify(new \App\Notifications\InspectionRejected($inspection));
+        }
+    }
+
+    /**
+     * Send notifications when revision is requested for an inspection
+     */
+    private function sendInspectionRevisionRequestedNotifications(Inspection $inspection)
+    {
+        // Notify the inspector who created the report
+        if ($inspection->user) {
+            $inspection->user->notify(new \App\Notifications\InspectionRevisionRequested($inspection));
+        }
+
+        // Notify admin and super admin users
+        $adminRecipients = User::whereIn('role', ['admin', 'super_admin'])
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($adminRecipients as $recipient) {
+            $recipient->notify(new \App\Notifications\InspectionRevisionRequested($inspection));
+        }
+    }
     public function history()
     {
         if (!auth()->user()->canApproveInspections()) {
