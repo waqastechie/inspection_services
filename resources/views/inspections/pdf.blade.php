@@ -34,6 +34,12 @@
             font-size: 16px;
         }
         
+        .header h3 {
+            margin: 5px 0;
+            color: #0056b3;
+            font-size: 14px;
+        }
+        
         .section-title {
             background-color: #007bff;
             color: white;
@@ -281,8 +287,9 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <h1>INSPECTION REPORT</h1>
-        <h2>{{ $inspection->inspection_number }}</h2>
+        <h1>GLOBAL ENERGY VENTURES</h1>
+        <h2>INSPECTION REPORT</h2>
+        <h3 style="margin: 5px 0; color: #0056b3; font-size: 14px;">{{ $inspection->inspection_number }}</h3>
         <p style="margin: 5px 0 0 0;">Professional Lifting Equipment Inspection</p>
     </div>
 
@@ -332,120 +339,8 @@
         </tr>
     </table>
 
-    <!-- Step 2: Services & Standards -->
-    <div class="section-title">STEP 2: SERVICES & STANDARDS</div>
-    
-    <table class="info-table">
-        <tr>
-            <td class="info-label">Standards Applied:</td>
-            <td>{{ $inspection->standards ?? 'N/A' }}</td>
-            <td class="info-label">Applicable Standard:</td>
-            <td>{{ $inspection->applicable_standard ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Local Procedure Number:</td>
-            <td>{{ $inspection->local_procedure_number ?? 'N/A' }}</td>
-            <td class="info-label">Drawing Number:</td>
-            <td>{{ $inspection->drawing_number ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Test Restrictions:</td>
-            <td>{{ $inspection->test_restrictions ?? 'N/A' }}</td>
-            <td class="info-label">Surface Condition:</td>
-            <td>{{ $inspection->surface_condition ?? 'N/A' }}</td>
-        </tr>
-    </table>
-    
-    @if($inspection->services && $inspection->services->count() > 0)
-    <div class="section-title">SERVICES PERFORMED</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 40%;">Service Name</th>
-                <th style="width: 15%;">Status</th>
-                <th style="width: 25%;">Inspector</th>
-                <th style="width: 20%;">Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($inspection->services as $service)
-            <tr>
-                <td>{{ $service->service_name ?? 'N/A' }}</td>
-                <td>
-                    <span class="status-badge status-{{ strtolower($service->status ?? 'pending') }}">
-                        {{ ucfirst($service->status ?? 'Pending') }}
-                    </span>
-                </td>
-                <td>{{ $service->inspector_name ?? 'N/A' }}</td>
-                <td>{{ $service->notes ?? '-' }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
-    <!-- Step 3: Personnel Assignments -->
-    <div class="section-title">STEP 3: PERSONNEL ASSIGNMENTS</div>
-    
-    <table class="info-table">
-        <tr>
-            <td class="info-label">Lead Inspector Name:</td>
-            <td>{{ $inspection->lead_inspector_name ?? 'N/A' }}</td>
-            <td class="info-label">Lead Inspector Certification:</td>
-            <td>{{ $inspection->lead_inspector_certification ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Lifting Examination Inspector:</td>
-            <td>{{ $inspection->liftingExaminationInspector->name ?? $inspection->lifting_examination_inspector ?? 'N/A' }}</td>
-            <td class="info-label">Load Test Inspector:</td>
-            <td>{{ $inspection->loadTestInspector->name ?? $inspection->load_test_inspector ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Thorough Examination Inspector:</td>
-            <td>{{ $inspection->thoroughExaminationInspector->name ?? $inspection->thorough_examination_inspector ?? 'N/A' }}</td>
-            <td class="info-label">MPI Service Inspector:</td>
-            <td>{{ $inspection->mpiServiceInspector->name ?? $inspection->mpi_service_inspector ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Visual Inspector:</td>
-            <td>{{ $inspection->visualInspector->name ?? $inspection->visual_inspector ?? 'N/A' }}</td>
-            <td class="info-label">Inspector Signature:</td>
-            <td>{{ $inspection->inspector_signature ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Report Date:</td>
-            <td>{{ $inspection->report_date ? $inspection->report_date->format('M j, Y') : 'N/A' }}</td>
-            <td class="info-label">Inspector Comments:</td>
-            <td>{{ $inspection->inspector_comments ?? 'N/A' }}</td>
-        </tr>
-    </table>
-    
-    @if($inspection->personnelAssignments && $inspection->personnelAssignments->count() > 0)
-    <div class="section-title">ASSIGNED PERSONNEL DETAILS</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 30%;">Name</th>
-                <th style="width: 25%;">Position</th>
-                <th style="width: 25%;">Certification</th>
-                <th style="width: 20%;">Certification Expiry</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($inspection->personnelAssignments as $assignment)
-            <tr>
-                <td>{{ $assignment->personnel->name ?? 'N/A' }}</td>
-                <td>{{ $assignment->personnel->position ?? 'N/A' }}</td>
-                <td>{{ $assignment->personnel->certification ?? 'N/A' }}</td>
-                <td>{{ $assignment->personnel->certification_expiry ? $assignment->personnel->certification_expiry->format('M j, Y') : 'N/A' }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
-    <!-- Step 4: Equipment Under Test -->
-    <div class="section-title">STEP 4: EQUIPMENT UNDER TEST</div>
+    <!-- Step 2: Equipment Details -->
+    <div class="section-title">STEP 2: EQUIPMENT DETAILS</div>
     
     <table class="info-table">
         <tr>
@@ -491,81 +386,84 @@
             <td>{{ $inspection->next_inspection_date ? $inspection->next_inspection_date->format('M j, Y') : 'N/A' }}</td>
         </tr>
     </table>
+
+    <!-- Step 3: Services -->
+    <div class="section-title">STEP 3: SERVICES</div>
     
-    @if($inspection->equipmentAssignments && $inspection->equipmentAssignments->count() > 0)
-    <div class="section-title">EQUIPMENT ASSIGNMENTS</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 30%;">Equipment Name</th>
-                <th style="width: 20%;">Type</th>
-                <th style="width: 15%;">Quantity</th>
-                <th style="width: 35%;">Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($inspection->equipmentAssignments as $assignment)
-            <tr>
-                <td>{{ $assignment->equipment->name ?? 'N/A' }}</td>
-                <td>{{ $assignment->equipment->type ?? 'N/A' }}</td>
-                <td>{{ $assignment->quantity ?? 'N/A' }}</td>
-                <td>{{ $assignment->notes ?? '-' }}</td>
-            </tr>
-            @endforeach
-        </tbody>
+    <table class="info-table">
+        <tr>
+            <td class="info-label">Standards Applied:</td>
+            <td>{{ $inspection->standards ?? 'N/A' }}</td>
+            <td class="info-label">Applicable Standard:</td>
+            <td>{{ $inspection->applicable_standard ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Local Procedure Number:</td>
+            <td>{{ $inspection->local_procedure_number ?? 'N/A' }}</td>
+            <td class="info-label">Drawing Number:</td>
+            <td>{{ $inspection->drawing_number ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Test Restrictions:</td>
+            <td>{{ $inspection->test_restrictions ?? 'N/A' }}</td>
+            <td class="info-label">Surface Condition:</td>
+            <td>{{ $inspection->surface_condition ?? 'N/A' }}</td>
+        </tr>
     </table>
-    @endif
     
-    @if($inspection->inspectionEquipment && $inspection->inspectionEquipment->count() > 0)
-    <div class="section-title">INSPECTION EQUIPMENT DETAILS</div>
+    @if($inspection->personnelAssignments && $inspection->personnelAssignments->count() > 0)
+    <div class="section-title">ASSIGNED PERSONNEL DETAILS</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 25%;">Serial Number</th>
-                <th style="width: 35%;">Description</th>
-                <th style="width: 15%;">SWL</th>
-                <th style="width: 25%;">Status</th>
+                <th style="width: 30%;">Name</th>
+                <th style="width: 25%;">Position</th>
+                <th style="width: 25%;">Certification</th>
+                <th style="width: 20%;">Certification Expiry</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($inspection->inspectionEquipment as $equipment)
+            @foreach($inspection->personnelAssignments as $assignment)
             <tr>
-                <td>{{ $equipment->serial_number ?? 'N/A' }}</td>
-                <td>{{ $equipment->description ?? 'N/A' }}</td>
-                <td>{{ $equipment->swl ?? 'N/A' }}</td>
-                <td>{{ $equipment->status ?? 'N/A' }}</td>
+                <td>{{ $assignment->personnel->full_name ?? 'N/A' }}</td>
+                <td>{{ $assignment->personnel->position ?? 'N/A' }}</td>
+                <td>{{ $assignment->personnel->certification ?? 'N/A' }}</td>
+                <td>{{ $assignment->personnel->certification_expiry ? $assignment->personnel->certification_expiry->format('M j, Y') : 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
     @endif
 
-    <!-- Step 5: Consumables & Materials -->
-    <div class="section-title">STEP 5: CONSUMABLES & MATERIALS</div>
+    <!-- ========== ALL SERVICES SECTIONS GROUPED TOGETHER ========== -->
     
-    @if($inspection->consumableAssignments && $inspection->consumableAssignments->count() > 0)
+    <!-- Services Performed Summary -->
+    @if($inspection->services && $inspection->services->count() > 0)
+    <div class="section-title">SERVICES PERFORMED</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 30%;">Consumable Name</th>
-                <th style="width: 20%;">Type</th>
-                <th style="width: 15%;">Quantity</th>
-                <th style="width: 35%;">Notes</th>
+                <th style="width: 40%;">Service Name</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 25%;">Inspector</th>
+                <th style="width: 20%;">Notes</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($inspection->consumableAssignments as $assignment)
+            @foreach($inspection->services as $service)
             <tr>
-                <td>{{ $assignment->consumable->name ?? 'N/A' }}</td>
-                <td>{{ $assignment->consumable->type ?? 'N/A' }}</td>
-                <td>{{ $assignment->quantity ?? 'N/A' }}</td>
-                <td>{{ $assignment->notes ?? '-' }}</td>
+                <td>{{ $service->service_name ?? 'N/A' }}</td>
+                <td>
+                    <span class="status-badge status-{{ strtolower($service->status ?? 'pending') }}">
+                        {{ ucfirst($service->status ?? 'Pending') }}
+                    </span>
+                </td>
+                <td>{{ $service->inspector_name ?? 'N/A' }}</td>
+                <td>{{ $service->notes ?? '-' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
-    @else
-    <p class="no-data">No consumables assigned for this inspection.</p>
     @endif
 
     <!-- Lifting Examination Details -->
@@ -647,50 +545,515 @@
         <tr>
             <td class="info-label">Magnetic Flow:</td>
             <td>{{ $inspection->mpiInspection->magnetic_flow_name ?? 'N/A' }}</td>
-            <td class="info-label">Current Flow:</td>
-            <td>{{ $inspection->mpiInspection->current_flow_name ?? 'N/A' }}</td>
+            <td class="info-label">Ink/Powder 2 Method:</td>
+            <td>{{ $inspection->mpiInspection->ink_powder_2_method_name ?? 'N/A' }}</td>
         </tr>
         <tr>
-            <td class="info-label">Ink/Powder 1 Carrier:</td>
-            <td>{{ ucfirst($inspection->mpiInspection->ink_powder_1_carrier ?? 'N/A') }}</td>
-            <td class="info-label">Ink/Powder 2 Carrier:</td>
-            <td>{{ ucfirst($inspection->mpiInspection->ink_powder_2_carrier ?? 'N/A') }}</td>
+            <td class="info-label">Demagnetization:</td>
+            <td>{{ $inspection->mpiInspection->demagnetization_name ?? 'N/A' }}</td>
+            <td class="info-label">Lighting:</td>
+            <td>{{ $inspection->mpiInspection->lighting_name ?? 'N/A' }}</td>
         </tr>
-        @if($inspection->mpiInspection->magnetic_particle_concentration)
         <tr>
-            <td class="info-label">Magnetic Particle Concentration:</td>
-            <td>{{ $inspection->mpiInspection->magnetic_particle_concentration }}</td>
-            <td class="info-label">Contact Spacing:</td>
-            <td>{{ $inspection->mpiInspection->contact_spacing ?? 'N/A' }}</td>
+            <td class="info-label">Lifting Points:</td>
+            <td>{{ $inspection->mpiInspection->lifting_points_name ?? 'N/A' }}</td>
+            <td class="info-label">Lifting Points Condition:</td>
+            <td>{{ $inspection->mpiInspection->lifting_points_condition_name ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Body Condition:</td>
+            <td>{{ $inspection->mpiInspection->body_condition_name ?? 'N/A' }}</td>
+            <td class="info-label">Markings Condition:</td>
+            <td>{{ $inspection->mpiInspection->markings_condition_name ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Overall Condition:</td>
+            <td>{{ $inspection->mpiInspection->overall_condition_name ?? 'N/A' }}</td>
+            <td class="info-label">Test Result:</td>
+            <td>{{ $inspection->mpiInspection->test_result_name ?? 'N/A' }}</td>
+        </tr>
+        @if($inspection->mpiInspection->notes)
+        <tr>
+            <td class="info-label">Notes:</td>
+            <td colspan="3">{{ $inspection->mpiInspection->notes }}</td>
         </tr>
         @endif
-        <tr>
-            <td class="info-label">Test Temperature:</td>
-            <td>{{ ucfirst($inspection->mpiInspection->test_temperature ?? 'N/A') }}</td>
-            <td class="info-label">Pull Test:</td>
-            <td>{{ ucfirst(str_replace('_', ' ', $inspection->mpiInspection->pull_test ?? 'N/A')) }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Post Test Cleaning:</td>
-            <td>{{ ucfirst(str_replace('_', ' ', $inspection->mpiInspection->post_test_cleaning ?? 'N/A')) }}</td>
-            <td class="info-label">Initial Demagnetisation:</td>
-            <td>{{ ucfirst($inspection->mpiInspection->initial_demagnetisation ?? 'N/A') }}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Final Demagnetisation:</td>
-            <td>{{ ucfirst($inspection->mpiInspection->final_demagnetisation ?? 'N/A') }}</td>
-            <td class="info-label">Overall Status:</td>
-            <td><strong>{{ ucfirst(str_replace('_', ' ', $inspection->mpiInspection->overall_status ?? 'N/A')) }}</strong></td>
-        </tr>
-        <tr>
-            <td class="info-label">MPI Test Results:</td>
-            <td colspan="3">{{ $inspection->mpiInspection->mpi_results ?? 'N/A' }}</td>
-        </tr>
     </table>
     @endif
 
-    <!-- Step 6: Test Results & Inspection Details -->
-    <div class="section-title">STEP 6: TEST RESULTS & INSPECTION DETAILS</div>
+    <!-- Load Test Service Section -->
+    @if($inspection->loadTest)
+    <div class="section-title">LOAD TEST SERVICE - DETAILED PARAMETERS & RESULTS</div>
+    
+    <table class="info-table">
+        @if($inspection->loadTest->load_test_inspector)
+        <tr>
+            <td class="info-label">Assigned Inspector:</td>
+            <td colspan="3">
+                @php $inspector = \App\Models\Personnel::find($inspection->loadTest->load_test_inspector); @endphp
+                @if($inspector)
+                    {{ $inspector->first_name }} {{ $inspector->last_name }} - {{ $inspector->job_title ?? 'Inspector' }}
+                @else
+                    Inspector ID: {{ $inspection->loadTest->load_test_inspector }}
+                @endif
+            </td>
+        </tr>
+        @endif
+        
+        @if($inspection->loadTest->load_test_duration)
+        <tr>
+            <td class="info-label">Test Duration:</td>
+            <td>{{ $inspection->loadTest->load_test_duration }}</td>
+            <td class="info-label">Two Points Diagonal:</td>
+            <td>{{ $inspection->loadTest->load_test_two_points_diagonal ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->loadTest->load_test_swl)
+        <tr>
+            <td class="info-label">SWL:</td>
+            <td>{{ $inspection->loadTest->load_test_swl }}</td>
+            <td class="info-label">Test Load:</td>
+            <td>{{ $inspection->loadTest->load_test_load ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->loadTest->load_test_result)
+        <tr>
+            <td class="info-label">Test Result:</td>
+            <td>{{ $inspection->loadTest->load_test_result }}</td>
+            <td class="info-label">Proof Load:</td>
+            <td>{{ $inspection->loadTest->load_test_proof_load ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->loadTest->load_test_notes)
+        <tr>
+            <td class="info-label">Notes:</td>
+            <td colspan="3">{{ $inspection->loadTest->load_test_notes }}</td>
+        </tr>
+        @endif
+    </table>
+    @endif
+
+    <!-- Other Tests Service Section -->
+    @if($inspection->otherTest)
+    <div class="section-title">OTHER TESTS SERVICE - DROP, TILT & LOWERING TESTS</div>
+    
+    <!-- Drop Test Section -->
+    @if($inspection->otherTest->drop_test_load || $inspection->otherTest->drop_type || $inspection->otherTest->drop_distance || $inspection->otherTest->drop_suspended || $inspection->otherTest->drop_impact_speed || $inspection->otherTest->drop_result || $inspection->otherTest->drop_notes)
+    <div style="background: #f8f9fa; padding: 10px; border-left: 4px solid #dc3545; margin-bottom: 10px;">
+        <strong style="color: #dc3545;">DROP TEST</strong>
+    </div>
+    <table class="info-table">
+        @if($inspection->otherTest->drop_test_load)
+        <tr>
+            <td class="info-label">Load:</td>
+            <td>{{ $inspection->otherTest->drop_test_load }}</td>
+            <td class="info-label">Type:</td>
+            <td>{{ $inspection->otherTest->drop_type ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->drop_distance)
+        <tr>
+            <td class="info-label">Distance:</td>
+            <td>{{ $inspection->otherTest->drop_distance }}</td>
+            <td class="info-label">Suspended:</td>
+            <td>{{ $inspection->otherTest->drop_suspended ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->drop_impact_speed)
+        <tr>
+            <td class="info-label">Impact Speed:</td>
+            <td>{{ $inspection->otherTest->drop_impact_speed }}</td>
+            <td class="info-label">Result:</td>
+            <td>{{ $inspection->otherTest->drop_result ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->drop_notes)
+        <tr>
+            <td class="info-label">Notes:</td>
+            <td colspan="3">{{ $inspection->otherTest->drop_notes }}</td>
+        </tr>
+        @endif
+    </table>
+    @endif
+
+    <!-- Tilt Test Section -->
+    @if($inspection->otherTest->tilt_test_load || $inspection->otherTest->tilt_angle || $inspection->otherTest->tilt_duration || $inspection->otherTest->tilt_result || $inspection->otherTest->tilt_notes)
+    <div style="background: #f8f9fa; padding: 10px; border-left: 4px solid #fd7e14; margin-bottom: 10px;">
+        <strong style="color: #fd7e14;">TILT TEST</strong>
+    </div>
+    <table class="info-table">
+        @if($inspection->otherTest->tilt_test_load)
+        <tr>
+            <td class="info-label">Load:</td>
+            <td>{{ $inspection->otherTest->tilt_test_load }}</td>
+            <td class="info-label">Angle:</td>
+            <td>{{ $inspection->otherTest->tilt_angle ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->tilt_duration)
+        <tr>
+            <td class="info-label">Duration:</td>
+            <td>{{ $inspection->otherTest->tilt_duration }}</td>
+            <td class="info-label">Result:</td>
+            <td>{{ $inspection->otherTest->tilt_result ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->tilt_notes)
+        <tr>
+            <td class="info-label">Notes:</td>
+            <td colspan="3">{{ $inspection->otherTest->tilt_notes }}</td>
+        </tr>
+        @endif
+    </table>
+    @endif
+
+    <!-- Lowering Test Section -->
+    @if($inspection->otherTest->lowering_test_load || $inspection->otherTest->lowering_speed || $inspection->otherTest->lowering_distance || $inspection->otherTest->lowering_result || $inspection->otherTest->lowering_notes)
+    <div style="background: #f8f9fa; padding: 10px; border-left: 4px solid #198754; margin-bottom: 10px;">
+        <strong style="color: #198754;">LOWERING TEST</strong>
+    </div>
+    <table class="info-table">
+        @if($inspection->otherTest->lowering_test_load)
+        <tr>
+            <td class="info-label">Load:</td>
+            <td>{{ $inspection->otherTest->lowering_test_load }}</td>
+            <td class="info-label">Speed:</td>
+            <td>{{ $inspection->otherTest->lowering_speed ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->lowering_distance)
+        <tr>
+            <td class="info-label">Distance:</td>
+            <td>{{ $inspection->otherTest->lowering_distance }}</td>
+            <td class="info-label">Result:</td>
+            <td>{{ $inspection->otherTest->lowering_result ?? 'N/A' }}</td>
+        </tr>
+        @endif
+        
+        @if($inspection->otherTest->lowering_notes)
+        <tr>
+            <td class="info-label">Notes:</td>
+            <td colspan="3">{{ $inspection->otherTest->lowering_notes }}</td>
+        </tr>
+        @endif
+    </table>
+    @endif
+    @endif
+
+    <!-- ========== END OF SERVICES SECTIONS ========== -->
+
+    <!-- Step 4: Equipment and Items Management -->
+    <div class="section-title">STEP 4: EQUIPMENT AND ITEMS MANAGEMENT</div>
+    
+    <div class="section-title">PERSONNEL ASSIGNMENTS</div>
+    <table class="info-table">
+        <tr>
+            <td class="info-label">Lead Inspector Name:</td>
+            <td>{{ $inspection->lead_inspector_name ?? 'N/A' }}</td>
+            <td class="info-label">Lead Inspector Certification:</td>
+            <td>{{ $inspection->lead_inspector_certification ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Lifting Examination Inspector:</td>
+            <td>{{ $inspection->liftingExaminationInspector->name ?? $inspection->lifting_examination_inspector ?? 'N/A' }}</td>
+            <td class="info-label">Load Test Inspector:</td>
+            <td>{{ $inspection->loadTestInspector->name ?? $inspection->load_test_inspector ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Thorough Examination Inspector:</td>
+            <td>{{ $inspection->thoroughExaminationInspector->name ?? $inspection->thorough_examination_inspector ?? 'N/A' }}</td>
+            <td class="info-label">MPI Service Inspector:</td>
+            <td>{{ $inspection->mpiServiceInspector->name ?? $inspection->mpi_service_inspector ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Visual Inspector:</td>
+            <td>{{ $inspection->visualInspector->name ?? $inspection->visual_inspector ?? 'N/A' }}</td>
+            <td class="info-label">Inspector Signature:</td>
+            <td>{{ $inspection->inspector_signature ?? 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Report Date:</td>
+            <td>{{ $inspection->report_date ? $inspection->report_date->format('M j, Y') : 'N/A' }}</td>
+            <td class="info-label">Inspector Comments:</td>
+            <td>{{ $inspection->inspector_comments ?? 'N/A' }}</td>
+        </tr>
+    </table>
+    
+    @if($inspection->equipmentAssignments && $inspection->equipmentAssignments->count() > 0)
+    <div class="section-title">EQUIPMENT ASSIGNMENTS</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 30%;">Equipment Name</th>
+                <th style="width: 20%;">Type</th>
+                <th style="width: 15%;">Quantity</th>
+                <th style="width: 35%;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($inspection->equipmentAssignments as $assignment)
+            <tr>
+                <td>{{ $assignment->equipment->name ?? 'N/A' }}</td>
+                <td>{{ $assignment->equipment->type ?? 'N/A' }}</td>
+                <td>{{ $assignment->quantity ?? 'N/A' }}</td>
+                <td>{{ $assignment->notes ?? '-' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+    
+    @if($inspection->inspectionEquipment && $inspection->inspectionEquipment->count() > 0)
+    <div class="section-title">INSPECTION EQUIPMENT DETAILS</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Serial Number</th>
+                <th style="width: 35%;">Description</th>
+                <th style="width: 15%;">SWL</th>
+                <th style="width: 25%;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($inspection->inspectionEquipment as $equipment)
+            <tr>
+                <td>{{ $equipment->serial_number ?? 'N/A' }}</td>
+                <td>{{ $equipment->description ?? 'N/A' }}</td>
+                <td>{{ $equipment->swl ?? 'N/A' }}</td>
+                <td>{{ $equipment->status ?? 'N/A' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
+    <!-- Step 5: Consumables & Materials -->
+    <div class="section-title">STEP 5: CONSUMABLES & MATERIALS</div>
+    
+    @if($inspection->consumableAssignments && $inspection->consumableAssignments->count() > 0)
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 30%;">Consumable Name</th>
+                <th style="width: 20%;">Type</th>
+                <th style="width: 15%;">Quantity</th>
+                <th style="width: 35%;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($inspection->consumableAssignments as $assignment)
+            <tr>
+                <td>{{ $assignment->consumable->name ?? 'N/A' }}</td>
+                <td>{{ $assignment->consumable->type ?? 'N/A' }}</td>
+                <td>{{ $assignment->quantity ?? 'N/A' }}</td>
+                <td>{{ $assignment->notes ?? '-' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @else
+    <p class="no-data">No consumables assigned for this inspection.</p>
+    @endif
+
+
+
+
+
+    <!-- Step 6: Images & Documentation -->
+    @if($inspection->images && count($inspection->images) > 0)
+    <div class="section-title">STEP 6: IMAGES & DOCUMENTATION</div>
+    
+    @php 
+        $imageCount = 0; 
+        $fileCount = 0;
+    @endphp
+    @foreach($inspection->images as $image)
+        @if($imageCount % 2 == 0)
+            <div style="display: table; width: 100%; margin-bottom: 20px; page-break-inside: avoid;">
+        @endif
+        
+        <div style="display: table-cell; width: 48%; vertical-align: top; padding: 5px; {{ $imageCount % 2 == 0 ? 'padding-right: 10px;' : 'padding-left: 10px;' }}">
+            <div class="inspection-image-container" style="margin-bottom: 5px;">
+                @php
+                    $filePath = storage_path('app/public/' . $image->file_path);
+                    $fileExists = file_exists($filePath);
+                    $isImage = $image->is_image;
+                    
+                    // Get file extension for icon
+                    $fileExtension = strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION));
+                    $fileIcon = '[DOC]'; // Default document icon
+                    
+                    switch($fileExtension) {
+                        case 'pdf':
+                            $fileIcon = '[PDF]';
+                            break;
+                        case 'doc':
+                        case 'docx':
+                            $fileIcon = '[DOC]';
+                            break;
+                        case 'xls':
+                        case 'xlsx':
+                            $fileIcon = '[XLS]';
+                            break;
+                        case 'ppt':
+                        case 'pptx':
+                            $fileIcon = '[PPT]';
+                            break;
+                        case 'txt':
+                            $fileIcon = '[TXT]';
+                            break;
+                        case 'zip':
+                        case 'rar':
+                        case '7z':
+                            $fileIcon = '[ZIP]';
+                            break;
+                        case 'jpg':
+                        case 'jpeg':
+                        case 'png':
+                        case 'gif':
+                        case 'bmp':
+                            $fileIcon = '[IMG]';
+                            break;
+                    }
+                    
+                    if ($isImage) {
+                        $displayLabel = "Image " . ($loop->iteration);
+                    } else {
+                        $fileCount++;
+                        $displayLabel = "File " . $fileCount;
+                    }
+                @endphp
+                
+                <div style="margin-bottom: 8px; font-weight: bold; color: #333; font-size: 11px; border-bottom: 1px solid #eee; padding-bottom: 4px;">
+                    {{ $displayLabel }}: {{ $image->caption ?? $image->original_name }}
+                </div>
+                
+                @if($isImage)
+                    {{-- Display images inline --}}
+                    @if($fileExists)
+                        @php
+                            try {
+                                $imageData = base64_encode(file_get_contents($filePath));
+                                $imageMimeType = $image->mime_type ?? 'image/jpeg';
+                                $base64Image = 'data:' . $imageMimeType . ';base64,' . $imageData;
+                            } catch (Exception $e) {
+                                $base64Image = null;
+                            }
+                        @endphp
+                        
+                        @if($base64Image)
+                            <div style="text-align: center; margin: 10px 0;">
+                                <img src="{{ $base64Image }}" alt="{{ $image->original_name }}" style="max-width: 100%; max-height: 250px; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 4px;">
+                            </div>
+                        @else
+                            <div style="border: 2px dashed #ccc; padding: 15px; text-align: center; color: #666; margin: 5px 0; font-size: 10px; border-radius: 4px;">
+                                <strong>Image could not be processed</strong><br>
+                                File: {{ $image->original_name }}<br>
+                                <small>Path: {{ $image->file_path }}</small>
+                            </div>
+                        @endif
+                    @else
+                        <div style="border: 2px dashed #f44336; padding: 15px; text-align: center; color: #666; margin: 5px 0; background: #ffebee; font-size: 10px; border-radius: 4px;">
+                            <strong>⚠ Image file not found</strong><br>
+                            File: {{ $image->original_name }}<br>
+                            <small>Expected path: {{ $image->file_path }}</small>
+                        </div>
+                    @endif
+                @else
+                    {{-- Display documents with improved styling --}}
+                    <div style="border: 1px solid #ddd; padding: 20px; margin: 10px 0; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); text-align: center; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        @if($fileExists)
+                            <div style="font-size: 24px; margin-bottom: 10px;">
+                                {{ $fileIcon }}
+                            </div>
+                            <div style="font-size: 12px; margin-bottom: 8px; color: #28a745; font-weight: bold;">
+                                Document Available
+                            </div>
+                            <div style="font-size: 10px; color: #555; margin-bottom: 8px; font-weight: 500;">
+                                {{ $image->original_name }}
+                                @if($image->formatted_size)
+                                    <br><span style="color: #6c757d;">({{ $image->formatted_size }})</span>
+                                @endif
+                            </div>
+                            <a href="{{ $image->download_url }}" style="font-size: 9px; color: #007bff; background: #e7f3ff; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 5px; text-decoration: none;" download>
+                                Download
+                            </a>
+                            {{-- QR Code for download --}}
+                            @php
+                                try {
+                                    $qrCode = new \Endroid\QrCode\QrCode($image->download_url);
+                                    $writer = new \Endroid\QrCode\Writer\PngWriter();
+                                    $result = $writer->write($qrCode);
+                                    $qrCodeData = 'data:image/png;base64,' . base64_encode($result->getString());
+                                } catch (Exception $e) {
+                                    $qrCodeData = null;
+                                }
+                            @endphp
+                            
+                            @if($qrCodeData)
+                                <div style="margin-top: 10px; padding: 8px; background: #fff; border: 1px solid #007bff; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 8px; color: #007bff; margin-bottom: 5px;">
+                                        Scan to download
+                                    </div>
+                                    <img src="{{ $qrCodeData }}" alt="QR Code" style="width: 60px; height: 60px; border: none;">
+                                </div>
+                            @else
+                                <div style="margin-top: 10px; padding: 8px; background: #fff; border: 1px dashed #007bff; border-radius: 4px; font-size: 8px; color: #007bff;">
+                                    📱 QR Code unavailable<br>
+                                    <small>(Generation failed)</small>
+                                </div>
+                            @endif
+                        @else
+                            <div style="font-size: 24px; margin-bottom: 10px; opacity: 0.5;">
+                                {{ $fileIcon }}
+                            </div>
+                            <div style="font-size: 12px; margin-bottom: 8px; color: #dc3545; font-weight: bold;">
+                                ⚠ Document file not found
+                            </div>
+                            <div style="font-size: 10px; color: #555;">
+                                {{ $image->original_name }}
+                            </div>
+                        @endif
+                    </div>
+                @endif
+                
+                @if($image->description)
+                    <div style="font-size: 9px; color: #666; margin-top: 5px; padding: 8px; background: #f8f9fa; border-left: 3px solid #007bff; border-radius: 0 4px 4px 0;">
+                        <strong>Description:</strong> {{ $image->description }}
+                    </div>
+                @endif
+            </div>
+        </div>
+        
+        @php $imageCount++; @endphp
+        
+        @if($imageCount % 2 == 0 || $loop->last)
+            </div>
+        @endif
+    @endforeach
+    @else
+        <div class="section-title">STEP 6: IMAGES & DOCUMENTATION</div>
+        <div style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+            No images or documentation uploaded for this inspection.
+        </div>
+    @endif
+
+
+
+    <!-- Step 7: Images & Documentation -->
+
+
+    <!-- Step 7: Review & Submit -->
+    <div class="section-title">STEP 7: REVIEW & SUBMIT</div>
     
     <table class="info-table">
         <tr>
@@ -758,85 +1121,6 @@
         </tr>
         @endif
     </table>
-
-    <!-- Step 7: Images & Documentation -->
-
-
-    <!-- Step 7: Inspection Images -->
-    @if($inspection->images && count($inspection->images) > 0)
-    <div class="section-title">STEP 7: INSPECTION IMAGES</div>
-    
-    @php $imageCount = 0; @endphp
-    @foreach($inspection->images as $image)
-        @if($imageCount % 2 == 0)
-            <div style="display: table; width: 100%; margin-bottom: 20px; page-break-inside: avoid;">
-        @endif
-        
-        <div style="display: table-cell; width: 48%; vertical-align: top; padding: 5px; {{ $imageCount % 2 == 0 ? 'padding-right: 10px;' : 'padding-left: 10px;' }}">
-            <div class="inspection-image-container" style="margin-bottom: 5px;">
-                <div style="margin-bottom: 8px; font-weight: bold; color: #333; font-size: 11px;">
-                    Image {{ $loop->iteration }}: {{ $image->caption ?? $image->original_name }}
-                </div>
-                
-                @php
-                    $imagePath = storage_path('app/public/' . $image->file_path);
-                    $imageExists = file_exists($imagePath);
-                @endphp
-                
-                @if($imageExists)
-                    @php
-                        try {
-                            $imageData = base64_encode(file_get_contents($imagePath));
-                            $imageMimeType = $image->mime_type ?? 'image/jpeg';
-                            $base64Image = 'data:' . $imageMimeType . ';base64,' . $imageData;
-                        } catch (Exception $e) {
-                            $base64Image = null;
-                        }
-                    @endphp
-                    
-                    @if($base64Image)
-                        <div style="text-align: center; margin: 10px 0;">
-                            <img src="{{ $base64Image }}" alt="{{ $image->original_name }}" style="max-width: 100%; max-height: 250px; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        </div>
-                    @else
-                        <div style="border: 2px dashed #ccc; padding: 15px; text-align: center; color: #666; margin: 5px 0; font-size: 10px;">
-                            <strong>Image could not be processed</strong><br>
-                            File: {{ $image->original_name }}<br>
-                            <small>Path: {{ $image->file_path }}</small>
-                        </div>
-                    @endif
-                @else
-                    <div style="border: 2px dashed #f44336; padding: 15px; text-align: center; color: #666; margin: 5px 0; background: #ffebee; font-size: 10px;">
-                        <strong>⚠ Image file not found</strong><br>
-                        File: {{ $image->original_name }}<br>
-                        <small>Expected path: {{ $image->file_path }}</small>
-                    </div>
-                @endif
-                
-                @if($image->caption && $image->caption !== $image->original_name)
-                    <div style="font-style: italic; color: #555; margin-top: 5px; text-align: center; background: #f5f5f5; padding: 3px; font-size: 9px;">
-                        Caption: {{ $image->caption }}
-                    </div>
-                @endif
-                
-                <div style="font-size: 8px; color: #888; margin-top: 5px; border-top: 1px solid #eee; padding-top: 3px;">
-                    <strong>File:</strong> {{ $image->original_name }} 
-                    @if($image->formatted_size)
-                        ({{ $image->formatted_size }})
-                    @endif
-                    @if($image->mime_type)
-                        | {{ $image->mime_type }}
-                    @endif
-                </div>
-            </div>
-        </div>
-        
-        @php $imageCount++; @endphp
-        @if($imageCount % 2 == 0 || $loop->last)
-            </div>
-        @endif
-    @endforeach
-    @endif
 
     <!-- Inspection Summary -->
     <div class="section-title">INSPECTION SUMMARY</div>
@@ -975,6 +1259,9 @@
         </div>
         <hr style="border: 1px solid #34495e; margin: 10px 0;">
         <p style="text-align: center; margin: 0; font-weight: bold; color: #2c3e50;">
+            GLOBAL ENERGY VENTURES
+        </p>
+        <p style="text-align: center; margin: 2px 0 0 0; font-size: 10px; color: #34495e;">
             PROFESSIONAL LIFTING EQUIPMENT INSPECTION SERVICES
         </p>
         <p style="text-align: center; margin: 5px 0 0 0; font-size: 8px; color: #7f8c8d;">

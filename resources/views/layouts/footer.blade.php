@@ -5,8 +5,11 @@
             <div class="col-md-6">
                 <h5 class="fw-bold mb-3">
                     <i class="fas fa-shield-alt me-2"></i>
-                    Professional Inspection Services
+                    Global Energy Ventures
                 </h5>
+                <h6 class="fw-semibold mb-2 text-white-75">
+                    Professional Inspection Services
+                </h6>
                 <p class="mb-2 text-white-75">
                     Certified lifting equipment inspection and compliance reporting for the oil & gas industry.
                 </p>
@@ -45,7 +48,7 @@
         <div class="row">
             <div class="col-md-6">
                 <p class="mb-0 small text-white-50">
-                    © {{ date('Y') }} Professional Inspection Services. All rights reserved.
+                    © {{ date('Y') }} Global Energy Ventures. All rights reserved.
                 </p>
             </div>
             <div class="col-md-6 text-md-end">

@@ -67,12 +67,7 @@ class Inspection extends Model
         'inspector_signature',
         'report_date',
         
-        // Service Inspector Assignments
-        'lifting_examination_inspector',
-        'load_test_inspector',
-        'thorough_examination_inspector',
-        'mpi_service_inspector',
-        'visual_inspector',
+        // Service Inspector Assignments - moved to separate service tables
         
         // Additional Notes
         'general_notes',
@@ -154,18 +149,120 @@ class Inspection extends Model
 
     /**
      * Get the services for the inspection.
+     * This accessor creates a collection of service objects from individual service tables.
+     * Accessed as $inspection->services (property) instead of $inspection->services() (method).
      */
-    public function services()
+    public function getServicesAttribute()
     {
-        // Prefer the dedicated 'services' table/model if present, otherwise fallback
+        $services = collect();
+        
+        // Check each service table and create service objects
+        if ($this->loadTest) {
+            $services->push((object)[
+                'id' => $this->loadTest->id,
+                'service_type' => 'load-test',
+                'status' => $this->loadTest->status ?? 'active'
+            ]);
+        }
+        
+        if ($this->mpiInspection) {
+            $services->push((object)[
+                'id' => $this->mpiInspection->id,
+                'service_type' => 'mpi-service',
+                'status' => $this->mpiInspection->status ?? 'active'
+            ]);
+        }
+        
+        if ($this->otherTest) {
+            $services->push((object)[
+                'id' => $this->otherTest->id,
+                'service_type' => 'other-services',
+                'status' => $this->otherTest->status ?? 'active'
+            ]);
+        }
+        
+        if ($this->liftingExamination) {
+            $services->push((object)[
+                'id' => $this->liftingExamination->id,
+                'service_type' => 'lifting-examination',
+                'status' => $this->liftingExamination->status ?? 'active'
+            ]);
+        }
+        
+        // Check for visual and thorough examination tables if they exist
         try {
-            if (\Schema::hasTable('services')) {
-                return $this->hasMany(Service::class, 'inspection_id');
+            if (\Schema::hasTable('visual_inspections') && \DB::table('visual_inspections')->where('inspection_id', $this->id)->count() > 0) {
+                $visual = \DB::table('visual_inspections')->where('inspection_id', $this->id)->first();
+                $services->push((object)[
+                    'id' => $visual->id,
+                    'service_type' => 'visual',
+                    'status' => $visual->status ?? 'active'
+                ]);
+            }
+            
+            if (\Schema::hasTable('thorough_examinations') && \DB::table('thorough_examinations')->where('inspection_id', $this->id)->count() > 0) {
+                $thorough = \DB::table('thorough_examinations')->where('inspection_id', $this->id)->first();
+                $services->push((object)[
+                    'id' => $thorough->id,
+                    'service_type' => 'thorough-examination',
+                    'status' => $thorough->status ?? 'active'
+                ]);
             }
         } catch (\Throwable $e) {
-            // ignore and fallback
+            // Tables don't exist, skip
         }
-        return $this->hasMany(InspectionService::class, 'inspection_id');
+
+        // Fallback: include services selected in services_performed even if specific records are missing
+        try {
+            $selected = $this->services_performed;
+            $selectedList = [];
+
+            if (is_array($selected)) {
+                $selectedList = $selected;
+            } elseif (is_string($selected) && trim($selected) !== '') {
+                $decoded = json_decode($selected, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $selectedList = $decoded;
+                } else {
+                    // Try comma-separated fallback
+                    $selectedList = array_filter(array_map('trim', explode(',', $selected)));
+                }
+            }
+
+            if (!empty($selectedList)) {
+                // Map human labels to internal service_type keys
+                $map = [
+                    'Load Test' => 'load-test',
+                    'Visual' => 'visual',
+                    'Visual Inspection' => 'visual',
+                    'Other Tests' => 'other-services',
+                    'Other Services' => 'other-services',
+                    'Lifting Examination' => 'lifting-examination',
+                    'MPI Inspection' => 'mpi-service',
+                    'Magnetic Particle Inspection' => 'mpi-service',
+                    'Thorough Examination' => 'thorough-examination',
+                ];
+
+                // Build a set of existing types to avoid duplicates
+                $existingTypes = $services->pluck('service_type')->all();
+
+                foreach ($selectedList as $label) {
+                    $type = $map[$label] ?? null;
+                    if ($type && !in_array($type, $existingTypes, true)) {
+                        $services->push((object)[
+                            'id' => null,
+                            'service_type' => $type,
+                            'status' => 'selected'
+                        ]);
+                        $existingTypes[] = $type;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore parsing issues, continue with whatever we have
+        }
+
+        return $services;
     }
 
     /**
@@ -182,6 +279,22 @@ class Inspection extends Model
     public function mpiInspection()
     {
         return $this->hasOne(MpiInspection::class);
+    }
+
+    /**
+     * Get the load test data for this inspection.
+     */
+    public function loadTest()
+    {
+        return $this->hasOne(LoadTest::class);
+    }
+
+    /**
+     * Get the other tests data for this inspection.
+     */
+    public function otherTest()
+    {
+        return $this->hasOne(OtherTest::class);
     }
 
     /**
@@ -257,16 +370,21 @@ class Inspection extends Model
     }
 
     /**
-     * Get inspection status with color
+     * Get status color for badge display
      */
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
             'draft' => 'secondary',
+            'submitted_for_qa' => 'warning',
+            'under_qa_review' => 'info',
+            'qa_approved' => 'success',
+            'qa_rejected' => 'danger',
+            'revision_required' => 'dark',
+            'completed' => 'primary',
             'in_progress' => 'warning',
-            'completed' => 'success',
             'cancelled' => 'danger',
-            default => 'secondary'
+            default => 'light'
         };
     }
 
@@ -573,3 +691,4 @@ class Inspection extends Model
 
     // NO OTHER IMAGE METHODS - KEEPING IT SIMPLE
 }
+

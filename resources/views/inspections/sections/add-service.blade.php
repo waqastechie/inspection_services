@@ -90,6 +90,19 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="service-card" data-service="other-services" data-section="section-other-services">
+                        <div class="card h-100 border-2" style="cursor: pointer;">
+                            <div class="card-body text-center p-4">
+                                <div class="service-icon mb-3">
+                                    <i class="fas fa-cogs fa-3x text-dark"></i>
+                                </div>
+                                <h6 class="card-title mb-0">Other Tests</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -119,6 +132,18 @@
             <div id="mpiServiceFormSection" style="display:none;">
                 @include('inspections.sections.mpi-service')
             </div>
+            <div id="loadTestFormSection" style="display:none;">
+                @include('inspections.sections.load-test')
+            </div>
+            <div id="thoroughExaminationFormSection" style="display:none;">
+                @include('inspections.sections.thorough-examination')
+            </div>
+            <div id="visualFormSection" style="display:none;">
+                @include('inspections.sections.visual')
+            </div>
+            <div id="otherServicesFormSection" style="display:none;">
+                @include('inspections.sections.other-services')
+            </div>
         </div>
     </div>
 </section>
@@ -145,7 +170,7 @@
 }
 
 .service-card.selected .card::after {
-    content: '✓';
+    content: "\2713";
     position: absolute;
     top: 10px;
     right: 15px;
@@ -211,11 +236,63 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedServicesInputs = document.getElementById('selectedServicesInputs');
     let selectedServices = [];
 
+    // Pre-select services if we're editing an inspection
+    @if(isset($inspection) && $inspection->services_performed)
+        @php
+            $servicesPerformed = $inspection->services_performed;
+            if (is_string($servicesPerformed)) {
+                $servicesPerformed = json_decode($servicesPerformed, true);
+            }
+            $servicesPerformed = $servicesPerformed ?: [];
+        @endphp
+        const existingServices = @json($servicesPerformed);
+        console.log('DEBUG: Existing services from services_performed:', existingServices);
+        
+        // Map service names to data-service values
+        const serviceNameMap = {
+            'Lifting Examination': 'lifting-examination',
+            'MPI Service': 'mpi-service', 
+            'Load Test': 'load-test',
+            'Thorough Examination': 'thorough-examination',
+            'Visual': 'visual',
+            'Other Services': 'other-services'
+        };
+        
+        // Pre-select existing services
+        existingServices.forEach(serviceName => {
+            console.log('DEBUG: Processing service name:', serviceName);
+            const serviceType = serviceNameMap[serviceName] || serviceName.toLowerCase().replace(/\s+/g, '-');
+            const serviceCard = document.querySelector(`[data-service="${serviceType}"]`);
+            console.log('DEBUG: Found service card for', serviceType, ':', serviceCard);
+            
+            if (serviceCard) {
+                serviceCard.classList.add('selected');
+                const serviceTitle = serviceCard.querySelector('.card-title').textContent;
+                console.log('DEBUG: Selected service:', serviceType, 'with title:', serviceTitle);
+                selectedServices.push({
+                    name: serviceType,
+                    title: serviceTitle
+                });
+            } else {
+                console.log('DEBUG: No service card found for:', serviceType);
+            }
+        });
+        
+        console.log('DEBUG: Final selected services:', selectedServices);
+        
+        // Update display after pre-selection
+        updateSelectedServicesDisplay();
+        updateInlineServiceForms();
+    @endif
 
     // Map service name to form section ID
     const serviceFormSectionMap = {
         'lifting-examination': 'liftingExaminationFormSection',
-        'mpi-service': 'mpiServiceFormSection'
+        'mpi-service': 'mpiServiceFormSection',
+        'load-test': 'loadTestFormSection',
+        'thorough-examination': 'thoroughExaminationFormSection',
+        'visual': 'visualFormSection',
+        'other-services': 'otherServicesFormSection'
     };
 
     serviceCards.forEach(card => {

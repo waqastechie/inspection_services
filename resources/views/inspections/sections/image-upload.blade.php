@@ -56,26 +56,79 @@
         <!-- Existing Images (for edit mode) -->
         @if(isset($inspection) && $inspection->images && $inspection->images->count() > 0)
         <div class="existing-images mb-4">
-            <h6><i class="fas fa-images me-2"></i>Existing Images</h6>
+            <h6><i class="fas fa-images me-2"></i>Existing Files</h6>
             <div class="row">
                 @foreach($inspection->images as $image)
                 <div class="col-md-3 mb-3">
                     <div class="card">
                         <div class="card-body p-2">
-                            @if(in_array(strtolower(pathinfo($image->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']))
+                            @if($image->is_image)
                                 <img src="{{ asset('storage/' . $image->file_path) }}" 
                                      class="img-fluid rounded mb-2" 
                                      alt="Inspection Image"
                                      style="max-height: 150px; width: 100%; object-fit: cover;">
                             @else
+                                @php
+                                    $extension = strtolower($image->extension);
+                                    $iconClass = 'fa-file-alt';
+                                    $iconColor = 'text-muted';
+                                    
+                                    switch($extension) {
+                                        case 'pdf':
+                                            $iconClass = 'fa-file-pdf';
+                                            $iconColor = 'text-danger';
+                                            break;
+                                        case 'doc':
+                                        case 'docx':
+                                            $iconClass = 'fa-file-word';
+                                            $iconColor = 'text-primary';
+                                            break;
+                                        case 'xls':
+                                        case 'xlsx':
+                                            $iconClass = 'fa-file-excel';
+                                            $iconColor = 'text-success';
+                                            break;
+                                        case 'ppt':
+                                        case 'pptx':
+                                            $iconClass = 'fa-file-powerpoint';
+                                            $iconColor = 'text-warning';
+                                            break;
+                                        case 'txt':
+                                            $iconClass = 'fa-file-alt';
+                                            $iconColor = 'text-info';
+                                            break;
+                                    }
+                                @endphp
                                 <div class="text-center py-3">
-                                    <i class="fas fa-file-alt fa-3x text-muted"></i>
+                                    <i class="fas {{ $iconClass }} fa-3x {{ $iconColor }}"></i>
                                     <br>
-                                    <small>{{ pathinfo($image->file_path, PATHINFO_EXTENSION) }}</small>
+                                    <small class="text-uppercase fw-bold">{{ $extension }}</small>
                                 </div>
                             @endif
+                            
+                            <div class="file-info mb-2">
+                                <small class="text-muted d-block text-truncate" title="{{ $image->original_name }}">
+                                    {{ $image->original_name }}
+                                </small>
+                                <small class="text-muted">{{ $image->formatted_file_size }}</small>
+                            </div>
+                            
+                            @if($image->caption)
+                            <div class="mb-2">
+                                <small class="text-muted fst-italic">{{ $image->caption }}</small>
+                            </div>
+                            @endif
+                            
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">{{ $image->caption ?? 'No description' }}</small>
+                                @if(!$image->is_image)
+                                    <a href="{{ $image->download_url }}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Download {{ $image->original_name }}">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                @else
+                                    <span></span>
+                                @endif
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                         onclick="removeExistingImage({{ $image->id }})">
                                     <i class="fas fa-trash"></i>
@@ -187,11 +240,41 @@ document.addEventListener('DOMContentLoaded', function() {
                             style="max-height: 150px; width: 100%; object-fit: cover;" 
                             alt="Preview">`;
         } else {
-            const extension = file.name.split('.').pop().toUpperCase();
+            const extension = file.name.split('.').pop().toLowerCase();
+            const extensionUpper = extension.toUpperCase();
+            let iconClass = 'fa-file-alt';
+            let iconColor = 'text-muted';
+            
+            switch(extension) {
+                case 'pdf':
+                    iconClass = 'fa-file-pdf';
+                    iconColor = 'text-danger';
+                    break;
+                case 'doc':
+                case 'docx':
+                    iconClass = 'fa-file-word';
+                    iconColor = 'text-primary';
+                    break;
+                case 'xls':
+                case 'xlsx':
+                    iconClass = 'fa-file-excel';
+                    iconColor = 'text-success';
+                    break;
+                case 'ppt':
+                case 'pptx':
+                    iconClass = 'fa-file-powerpoint';
+                    iconColor = 'text-warning';
+                    break;
+                case 'txt':
+                    iconClass = 'fa-file-alt';
+                    iconColor = 'text-info';
+                    break;
+            }
+            
             preview = `<div class="text-center py-3">
-                        <i class="fas fa-file-alt fa-3x text-muted"></i>
+                        <i class="fas ${iconClass} fa-3x ${iconColor}"></i>
                         <br>
-                        <small>${extension}</small>
+                        <small class="text-uppercase fw-bold">${extensionUpper}</small>
                        </div>`;
         }
 

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -66,5 +65,51 @@ class InspectionImage extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('created_at');
+    }
+
+    /**
+     * Check if the file is an image
+     */
+    public function getIsImageAttribute(): bool
+    {
+        // Check metadata first (for new uploads)
+        if (isset($this->metadata['is_image'])) {
+            return $this->metadata['is_image'];
+        }
+        
+        // Fallback to MIME type check (for existing files)
+        return strpos($this->mime_type, 'image/') === 0;
+    }
+
+    /**
+     * Check if the file is a document
+     */
+    public function getIsDocumentAttribute(): bool
+    {
+        return !$this->is_image;
+    }
+
+    /**
+     * Get the file type (image or document)
+     */
+    public function getFileTypeAttribute(): string
+    {
+        return $this->is_image ? 'image' : 'document';
+    }
+
+    /**
+     * Get the file extension
+     */
+    public function getExtensionAttribute(): string
+    {
+        return strtolower(pathinfo($this->file_path, PATHINFO_EXTENSION));
+    }
+
+    /**
+     * Get download URL for documents
+     */
+    public function getDownloadUrlAttribute()
+    {
+        return route('inspections.file.download', ['inspection' => $this->inspection_id, 'file' => $this->id]);
     }
 }

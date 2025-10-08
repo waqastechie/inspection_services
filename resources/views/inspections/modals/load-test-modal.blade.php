@@ -15,12 +15,8 @@
                     Configure detailed load test parameters and procedures.
                 </div>
                 
-                <div class="row g-3">
-                    <div class="col-12">
-                        <p>Detailed load test configuration forms would be implemented here...</p>
-                        <p class="text-muted">This modal can contain load test procedures, weight specifications, and safety requirements.</p>
-                    </div>
-                </div>
+                <!-- Include the load test section -->
+                @include('inspections.sections.load-test')
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

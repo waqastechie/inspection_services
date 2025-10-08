@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +11,6 @@ class LiftingExamination extends Model
 
     protected $fillable = [
         'inspection_id',
-        // Remove inspection_service_id since we don't need the intermediate table
         'inspector_id',
         'first_examination',
         'equipment_installation_details',
@@ -24,6 +22,32 @@ class LiftingExamination extends Model
         'defect_timeline',
         'repair_details',
         'test_details',
+        // New lifting examination fields
+        'lifting_examination_inspector',
+        'thorough_examination_inspector',
+        'thorough_examination_comments',
+        'thorough_method',
+        'thorough_equipment',
+        'thorough_conditions',
+        'thorough_results',
+        // New conditional defect fields
+        'defect_location',
+        'defect_type',
+        'defect_severity',
+        'defect_extent',
+        'existing_danger_details',
+        'potential_danger_details',
+        'defect_urgency',
+        'estimated_repair_cost',
+        'estimated_repair_duration',
+        'specialist_required',
+        'specialist_type',
+        'out_of_service_required',
+        'out_of_service_reason',
+        'followup_retest',
+        'followup_reinspection',
+        'followup_monitoring',
+        'followup_notes',
     ];
 
     protected $casts = [

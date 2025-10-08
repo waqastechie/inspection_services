@@ -567,7 +567,8 @@
     
     @foreach($inspection->services as $service)
     @php
-        $serviceData = $service->service_data;
+        // Safely read optional service_data property (may not exist on stdClass)
+        $serviceData = property_exists($service, 'service_data') ? $service->service_data : [];
         
         // Handle JSON decoding - could be string or already array
         if (is_string($serviceData)) {
@@ -589,8 +590,20 @@
     @endphp
     
     <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+        @php
+            // Map service_type to human-readable labels for PDF
+            $serviceTypeLabels = [
+                'load-test' => 'Load Test',
+                'mpi-service' => 'MPI Inspection',
+                'other-services' => 'Other Services',
+                'lifting-examination' => 'Lifting Examination',
+                'visual' => 'Visual Inspection',
+                'thorough-examination' => 'Thorough Examination',
+            ];
+            $serviceLabel = $serviceTypeLabels[$service->service_type ?? ''] ?? ucwords(str_replace(['-', '_'], ' ', $service->service_type ?? 'Service'));
+        @endphp
         <div style="background-color: #f0f0f0; padding: 5px; font-weight: bold; margin-bottom: 10px;">
-            {{ $service->service_type_name }}
+            {{ $serviceLabel }}
         </div>
         
         <table class="details-table">
@@ -1106,7 +1119,7 @@
     @endphp
     @if(is_array($inspection_images) && count($inspection_images) > 0)
     <div class="page-break"></div>
-    <div class="section-header">INSPECTION IMAGES</div>
+    <div class="section-header">INSPECTION FILES</div>
     
     <div style="margin: 15px 0;">
         @foreach($inspection_images as $index => $image)
@@ -1123,30 +1136,133 @@
                     // Complex image object
                     $imageData = is_string($image) ? json_decode($image, true) : $image;
                 }
+                
+                // Get file extension for icon
+                $fileName = $imageData['name'] ?? basename($image) ?? 'file';
+                $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                
+                // Determine file type icon (using text symbols compatible with DomPDF)
+                $fileIcon = '[DOC]'; // Default
+                switch($fileExtension) {
+                    case 'pdf':
+                        $fileIcon = '[PDF]';
+                        break;
+                    case 'doc':
+                    case 'docx':
+                        $fileIcon = '[DOC]';
+                        break;
+                    case 'xls':
+                    case 'xlsx':
+                        $fileIcon = '[XLS]';
+                        break;
+                    case 'ppt':
+                    case 'pptx':
+                        $fileIcon = '[PPT]';
+                        break;
+                    case 'txt':
+                        $fileIcon = '[TXT]';
+                        break;
+                    case 'zip':
+                    case 'rar':
+                    case '7z':
+                        $fileIcon = '[ZIP]';
+                        break;
+                    case 'jpg':
+                    case 'jpeg':
+                    case 'png':
+                    case 'gif':
+                    case 'bmp':
+                        $fileIcon = '[IMG]';
+                        break;
+                }
+                
+                // Create download URL for QR code
+                $downloadUrl = url('/inspections/' . $inspection->id . '/file/' . ($index + 1) . '/download');
+                
+                // Generate QR Code
+                $qrCodeData = '';
+                try {
+                    $qrCode = new \Endroid\QrCode\QrCode($downloadUrl);
+                    $writer = new \Endroid\QrCode\Writer\PngWriter();
+                    $result = $writer->write($qrCode);
+                    $qrCodeData = 'data:image/png;base64,' . base64_encode($result->getString());
+                } catch (Exception $e) {
+                    $qrCodeData = '';
+                }
             @endphp
             @if($imageData && (isset($imageData['dataUrl']) || isset($imageData['path'])))
-                @php
-                    $imageName = $imageData['name'] ?? basename($image) ?? 'Inspection Image ' . ($index + 1);
-                    $imageCaption = $imageData['caption'] ?? '';
-                    $imagePath = isset($imageData['path']) ? public_path($imageData['path']) : null;
-                @endphp
-                <div class="image-container" style="margin-bottom: 20px; page-break-inside: avoid;">
-                    <div class="image-title" style="font-weight: bold; margin-bottom: 5px;">
-                        Image {{ $index + 1 }}: {{ $imageName }}
+                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); page-break-inside: avoid;">
+                    <!-- File Header -->
+                    <div style="display: flex; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">
+                        <span style="font-size: 10px; font-weight: bold; color: #ffffff; background-color: #007bff; padding: 4px 6px; border-radius: 4px; margin-right: 10px; font-family: monospace;">{{ $fileIcon }}</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 14px; color: #495057;">
+                                File {{ $index + 1 }}:
+                            </div>
+                            <div style="font-size: 12px; color: #6c757d;">
+                                Document Available
+                            </div>
+                        </div>
                     </div>
-                    @if(!empty($imageCaption))
-                        <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
-                            {{ $imageCaption }}
+                    
+                    <!-- File Details -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 11px; color: #495057; margin-bottom: 5px;">
+                            {{ $fileName }}
                         </div>
-                    @endif
-                    @if($imagePath && file_exists($imagePath))
-                        <div style="text-align: center; margin: 10px 0;">
-                            <img src="{{ $imagePath }}" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;" alt="{{ $imageName }}">
+                        @if(isset($imageData['path']) && file_exists(public_path($imageData['path'])))
+                            @php
+                                $fileSize = filesize(public_path($imageData['path']));
+                                $fileSizeFormatted = $fileSize > 1024 * 1024 
+                                    ? round($fileSize / (1024 * 1024), 2) . ' MB'
+                                    : round($fileSize / 1024, 2) . ' KB';
+                            @endphp
+                            <div style="font-size: 10px; color: #6c757d;">
+                                ({{ $fileSizeFormatted }})
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <!-- Download Section -->
+                    <div style="text-align: center; padding: 10px; background: #ffffff; border: 1px solid #dee2e6; border-radius: 4px;">
+                        <div style="font-size: 11px; margin-bottom: 8px;">
+                            <span style="background-color: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Download</span>
                         </div>
-                    @elseif(isset($imageData['dataUrl']))
-                        <div style="text-align: center; margin: 10px 0;">
-                            <img src="{{ $imageData['dataUrl'] }}" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;" alt="{{ $imageName }}">
+                        
+                        <!-- QR Code -->
+                        <div style="border: 2px dashed #007bff; padding: 10px; border-radius: 4px; background: #f8f9ff;">
+                            @if($qrCodeData)
+                                <img src="{{ $qrCodeData }}" style="width: 80px; height: 80px;" alt="QR Code">
+                                <div style="font-size: 9px; color: #6c757d; margin-top: 5px;">
+                                    Scan to download
+                                </div>
+                            @else
+                                <div style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border: 1px solid #dee2e6; margin: 0 auto;">
+                                    <span style="font-size: 10px; color: #6c757d;">QR</span>
+                                </div>
+                                <div style="font-size: 9px; color: #dc3545; margin-top: 5px;">
+                                    QR Code unavailable<br>(Generation failed)
+                                </div>
+                            @endif
                         </div>
+                    </div>
+                    
+                    <!-- Image Preview (if applicable) -->
+                    @if(in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'bmp']))
+                        @php
+                            $imagePath = isset($imageData['path']) ? public_path($imageData['path']) : null;
+                        @endphp
+                        @if($imagePath && file_exists($imagePath))
+                            <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                                <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Preview:</div>
+                                <img src="{{ $imagePath }}" style="max-width: 100%; max-height: 200px; border: 1px solid #ccc; border-radius: 4px;" alt="{{ $fileName }}">
+                            </div>
+                        @elseif(isset($imageData['dataUrl']))
+                            <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                                <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Preview:</div>
+                                <img src="{{ $imageData['dataUrl'] }}" style="max-width: 100%; max-height: 200px; border: 1px solid #ccc; border-radius: 4px;" alt="{{ $fileName }}">
+                            </div>
+                        @endif
                     @endif
                 </div>
             @endif

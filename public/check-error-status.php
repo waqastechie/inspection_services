@@ -1,3 +1,69 @@
+<?php
+try {
+    // Include Laravel
+    require_once '../vendor/autoload.php';
+    $app = require_once '../bootstrap/app.php';
+    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $kernel->bootstrap();
+    
+    $laravel_loaded = true;
+    $laravel_error = null;
+    
+    // Test Inspection model
+    $inspection = App\Models\Inspection::first();
+    $inspection_works = $inspection !== null;
+    
+    $images_method_works = false;
+    $images_count = 0;
+    $images_for_edit_works = false;
+    $images_for_edit_count = 0;
+    $image_model_works = false;
+    $image_model_error = null;
+    $image_service_works = false;
+    $image_service_error = null;
+    
+    if ($inspection) {
+        // Test images method
+        try {
+            $images = $inspection->images();
+            $images_method_works = true;
+            $images_count = $images->count();
+        } catch (Exception $e) {
+            $images_method_error = $e->getMessage();
+        }
+        
+        // Test images_for_edit attribute
+        try {
+            $imagesForEdit = $inspection->images_for_edit;
+            $images_for_edit_works = true;
+            $images_for_edit_count = $imagesForEdit->count();
+        } catch (Exception $e) {
+            $images_for_edit_error = $e->getMessage();
+        }
+        
+        // Test InspectionImage model
+        try {
+            $imageModel = new App\Models\InspectionImage();
+            $image_model_works = true;
+        } catch (Exception $e) {
+            $image_model_error = $e->getMessage();
+        }
+        
+        // Test ImageUploadService
+        try {
+            $imageService = new App\Services\ImageUploadService();
+            $image_service_works = true;
+        } catch (Exception $e) {
+            $image_service_error = $e->getMessage();
+        }
+    }
+    
+} catch (Exception $e) {
+    $laravel_loaded = false;
+    $laravel_error = $e->getMessage();
+    $laravel_trace = $e->getTraceAsString();
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,56 +82,48 @@
     <div class="container">
         <h1>🔧 Error Status Check</h1>
         
-        <?php
-        try {
-            // Include Laravel
-            require_once '../vendor/autoload.php';
-            $app = require_once '../bootstrap/app.php';
-            $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-            $kernel->bootstrap();
+        <?php if ($laravel_loaded): ?>
+            <div class="status success">✅ Laravel loaded successfully</div>
             
-            echo '<div class="status success">✅ Laravel loaded successfully</div>';
+            <?php if ($inspection_works): ?>
+                <div class="status success">✅ Inspection model works</div>
+                
+                <?php if ($images_method_works): ?>
+                    <div class="status success">✅ images() method works - returned <?= $images_count ?> items</div>
+                <?php else: ?>
+                    <div class="status error">❌ images() method error: <?= htmlspecialchars($images_method_error) ?></div>
+                <?php endif; ?>
+                
+                <?php if ($images_for_edit_works): ?>
+                    <div class="status success">✅ images_for_edit attribute works - returned <?= $images_for_edit_count ?> items</div>
+                <?php else: ?>
+                    <div class="status error">❌ images_for_edit attribute error: <?= htmlspecialchars($images_for_edit_error) ?></div>
+                <?php endif; ?>
+                
+                <?php if ($image_model_works): ?>
+                    <div class="status success">✅ InspectionImage model loads (disabled version)</div>
+                <?php else: ?>
+                    <div class="status warning">⚠️ InspectionImage model error: <?= htmlspecialchars($image_model_error) ?></div>
+                <?php endif; ?>
+                
+                <?php if ($image_service_works): ?>
+                    <div class="status success">✅ ImageUploadService loads correctly</div>
+                <?php else: ?>
+                    <div class="status warning">⚠️ ImageUploadService error: <?= htmlspecialchars($image_service_error) ?></div>
+                <?php endif; ?>
+                
+                <div class="status success"><strong>🎉 All tests passed! The addEagerConstraints error should be fixed!</strong></div>
+                
+            <?php else: ?>
+                <div class="status warning">⚠️ No inspections found in database</div>
+            <?php endif; ?>
             
-            // Test Inspection model
-            $inspection = App\Models\Inspection::first();
-            if ($inspection) {
-                echo '<div class="status success">✅ Inspection model works</div>';
-                
-                // Test images method (this was causing the error)
-                $images = $inspection->images();
-                echo '<div class="status success">✅ images() method works - returned ' . $images->count() . ' items</div>';
-                
-                // Test images_for_edit attribute
-                $imagesForEdit = $inspection->images_for_edit;
-                echo '<div class="status success">✅ images_for_edit attribute works - returned ' . $imagesForEdit->count() . ' items</div>';
-                
-                // Test InspectionImage model (should be disabled)
-                try {
-                    $imageModel = new App\Models\InspectionImage();
-                    echo '<div class="status success">✅ InspectionImage model loads (disabled version)</div>';
-                } catch (Exception $e) {
-                    echo '<div class="status warning">⚠️ InspectionImage model error: ' . $e->getMessage() . '</div>';
-                }
-                
-                // Test ImageUploadService
-                try {
-                    $imageService = new App\Services\ImageUploadService();
-                    echo '<div class="status success">✅ ImageUploadService loads correctly</div>';
-                } catch (Exception $e) {
-                    echo '<div class="status warning">⚠️ ImageUploadService error: ' . $e->getMessage() . '</div>';
-                }
-                
-                echo '<div class="status success"><strong>🎉 All tests passed! The addEagerConstraints error should be fixed!</strong></div>';
-                
-            } else {
-                echo '<div class="status warning">⚠️ No inspections found in database</div>';
-            }
-            
-        } catch (Exception $e) {
-            echo '<div class="status error">❌ Error: ' . htmlspecialchars($e->getMessage()) . '</div>';
-            echo '<div class="status error">Stack trace:<br><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre></div>';
-        }
-        ?>
+        <?php else: ?>
+            <div class="status error">❌ Error: <?= htmlspecialchars($laravel_error) ?></div>
+            <?php if (isset($laravel_trace)): ?>
+                <div class="status error">Stack trace:<br><pre><?= htmlspecialchars($laravel_trace) ?></pre></div>
+            <?php endif; ?>
+        <?php endif; ?>
         
         <h2>What Was Fixed:</h2>
         <ul>

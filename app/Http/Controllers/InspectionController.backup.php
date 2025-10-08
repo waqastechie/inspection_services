@@ -1,6 +1,5 @@
 
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -285,7 +284,19 @@ class InspectionController extends Controller
                 }
                 
                 // Clear existing related data
-                $inspection->services()->delete();
+                // Delete from individual service tables since services is now an accessor
+                if ($inspection->loadTest) {
+                    $inspection->loadTest->delete();
+                }
+                if ($inspection->mpiInspection) {
+                    $inspection->mpiInspection->delete();
+                }
+                if ($inspection->otherTest) {
+                    $inspection->otherTest->delete();
+                }
+                if ($inspection->liftingExamination) {
+                    $inspection->liftingExamination->delete();
+                }
                 $inspection->personnelAssignments()->delete();
                 $inspection->equipmentAssignments()->delete();
                 $inspection->consumableAssignments()->delete();
@@ -794,7 +805,7 @@ class InspectionController extends Controller
      */
     public function index()
     {
-        $inspections = Inspection::with(['services', 'personnelAssignments', 'equipmentAssignments', 'consumableAssignments'])
+        $inspections = Inspection::with(['personnelAssignments', 'equipmentAssignments', 'consumableAssignments'])
             ->orderBy('created_at', 'desc')
             ->get(); // Get all records for DataTables to handle
             
@@ -947,7 +958,19 @@ class InspectionController extends Controller
             }
 
             // Delete existing related records and recreate them
-            $inspection->services()->delete();
+            // Delete from individual service tables since services is now an accessor
+            if ($inspection->loadTest) {
+                $inspection->loadTest->delete();
+            }
+            if ($inspection->mpiInspection) {
+                $inspection->mpiInspection->delete();
+            }
+            if ($inspection->otherTest) {
+                $inspection->otherTest->delete();
+            }
+            if ($inspection->liftingExamination) {
+                $inspection->liftingExamination->delete();
+            }
             $inspection->personnelAssignments()->delete();
             $inspection->equipmentAssignments()->delete();
             $inspection->consumableAssignments()->delete();
@@ -1073,7 +1096,19 @@ class InspectionController extends Controller
             DB::beginTransaction();
             
             // Delete all related records first
-            $inspection->services()->delete();
+            // Delete from individual service tables since services is now an accessor
+            if ($inspection->loadTest) {
+                $inspection->loadTest->delete();
+            }
+            if ($inspection->mpiInspection) {
+                $inspection->mpiInspection->delete();
+            }
+            if ($inspection->otherTest) {
+                $inspection->otherTest->delete();
+            }
+            if ($inspection->liftingExamination) {
+                $inspection->liftingExamination->delete();
+            }
             $inspection->personnelAssignments()->delete();
             $inspection->equipmentAssignments()->delete();
             $inspection->consumableAssignments()->delete();
@@ -1247,7 +1282,19 @@ class InspectionController extends Controller
             $inspection->update($updateData);
 
             // Clear and re-store related data
-            $inspection->services()->delete();
+            // Delete from individual service tables since services is now an accessor
+            if ($inspection->loadTest) {
+                $inspection->loadTest->delete();
+            }
+            if ($inspection->mpiInspection) {
+                $inspection->mpiInspection->delete();
+            }
+            if ($inspection->otherTest) {
+                $inspection->otherTest->delete();
+            }
+            if ($inspection->liftingExamination) {
+                $inspection->liftingExamination->delete();
+            }
             $inspection->personnelAssignments()->delete();
             $inspection->equipmentAssignments()->delete();
             $inspection->consumableAssignments()->delete();

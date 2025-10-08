@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\Inspection;
@@ -84,24 +83,37 @@ class ImageUploadService
     public function saveBase64Image(Inspection $inspection, string $dataUrl, string $originalName, string $caption = '', int $sortOrder = 0): ?InspectionImage
     {
         try {
-            // Extract the base64 data
-            if (!preg_match('/^data:image\/([a-zA-Z]+);base64,(.+)$/', $dataUrl, $matches)) {
+            // Extract the base64 data - handle both images and documents
+            if (preg_match('/^data:image\/([a-zA-Z]+);base64,(.+)$/', $dataUrl, $matches)) {
+                // Handle image files
+                $fileType = $matches[1];
+                $fileData = base64_decode($matches[2]);
+                $mimeType = 'image/' . $fileType;
+                $isImage = true;
+            } elseif (preg_match('/^data:([^;]+);base64,(.+)$/', $dataUrl, $matches)) {
+                // Handle document files (PDF, DOC, DOCX)
+                $mimeType = $matches[1];
+                $fileData = base64_decode($matches[2]);
+                $isImage = false;
+                
+                // Determine file extension from mime type
+                $fileType = $this->getExtensionFromMimeType($mimeType);
+            } else {
+                Log::warning('Invalid data URL format for file: ' . $originalName);
                 return null;
             }
-
-            $imageType = $matches[1];
-            $imageData = base64_decode($matches[2]);
             
-            if ($imageData === false) {
+            if ($fileData === false) {
+                Log::warning('Failed to decode base64 data for file: ' . $originalName);
                 return null;
             }
 
             // Generate unique filename
-            $fileName = 'inspection_' . $inspection->id . '_' . time() . '_' . Str::random(8) . '.' . $imageType;
+            $fileName = 'inspection_' . $inspection->id . '_' . time() . '_' . Str::random(8) . '.' . $fileType;
             $filePath = 'inspections/images/' . $fileName;
 
             // Store the file
-            Storage::disk('public')->put($filePath, $imageData);
+            Storage::disk('public')->put($filePath, $fileData);
 
             // Create database record
             $inspectionImage = InspectionImage::create([
@@ -109,13 +121,15 @@ class ImageUploadService
                 'original_name' => $originalName,
                 'file_name' => $fileName,
                 'file_path' => $filePath,
-                'mime_type' => 'image/' . $imageType,
-                'file_size' => strlen($imageData),
+                'mime_type' => $mimeType,
+                'file_size' => strlen($fileData),
                 'caption' => $caption,
                 'sort_order' => $sortOrder,
                 'metadata' => [
                     'uploaded_at' => now()->toISOString(),
-                    'original_data_url_length' => strlen($dataUrl)
+                    'original_data_url_length' => strlen($dataUrl),
+                    'is_image' => $isImage,
+                    'file_type' => $isImage ? 'image' : 'document'
                 ]
             ]);
 
@@ -204,5 +218,32 @@ class ImageUploadService
             Log::error('Error deleting image: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Get file extension from MIME type
+     */
+    private function getExtensionFromMimeType(string $mimeType): string
+    {
+        $mimeToExtension = [
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'image/jpeg' => 'jpg',
+            'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp'
+        ];
+
+        return $mimeToExtension[$mimeType] ?? 'bin';
+    }
+
+    /**
+     * Check if a file is an image based on MIME type
+     */
+    public function isImageFile(string $mimeType): bool
+    {
+        return strpos($mimeType, 'image/') === 0;
     }
 }

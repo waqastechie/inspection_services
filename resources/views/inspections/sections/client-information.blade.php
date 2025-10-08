@@ -36,7 +36,7 @@
                        class="form-control @error('inspection_date') is-invalid @enderror" 
                        id="inspection_date" 
                        name="inspection_date" 
-                       value="{{ old('inspection_date', $inspection->inspection_date ?? now()->format('Y-m-d')) }}" 
+                       value="{{ old('inspection_date', $inspection?->inspection_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" 
                        required>
                 @error('inspection_date')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -61,22 +61,14 @@
 
             <!-- Inspector -->
             <div class="col-md-6 mb-3">
-                <label for="inspector_id" class="form-label">Inspector</label>
-                <select class="form-select @error('inspector_id') is-invalid @enderror" 
-                        id="inspector_id" name="inspector_id">
-                    <option value="">Select Inspector</option>
-                    @if(isset($users) && $users->count() > 0)
-                        @foreach($users as $inspector)
-                            <option value="{{ $inspector->id }}" 
-                                    {{ (old('inspector_id', $inspection->inspector_id ?? auth()->id()) == $inspector->id) ? 'selected' : '' }}>
-                                {{ $inspector->name }}
-                            </option>
-                        @endforeach
-                    @else
-                        <option value="" disabled>No inspectors found</option>
-                    @endif
-                </select>
-                @error('inspector_id')
+                <label for="lead_inspector_name" class="form-label">Lead Inspector</label>
+                <input type="text" 
+                       class="form-control @error('lead_inspector_name') is-invalid @enderror" 
+                       id="lead_inspector_name" 
+                       name="lead_inspector_name" 
+                       value="{{ old('lead_inspector_name', $inspection->lead_inspector_name ?? auth()->user()->name) }}"
+                       placeholder="Lead Inspector Name">
+                @error('lead_inspector_name')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
@@ -97,29 +89,32 @@
                 @enderror
             </div>
 
-            <!-- Inspection Type -->
+            <!-- Equipment Type -->
             <div class="col-md-6 mb-3">
-                <label for="inspection_type" class="form-label">Inspection Type</label>
-                <select class="form-select @error('inspection_type') is-invalid @enderror" 
-                        id="inspection_type" name="inspection_type">
-                    <option value="">Select Type</option>
-                    <option value="lifting_examination" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'lifting_examination') ? 'selected' : '' }}>
-                        Lifting Equipment Examination
+                <label for="equipment_type" class="form-label">Equipment Type</label>
+                <select class="form-select @error('equipment_type') is-invalid @enderror" 
+                        id="equipment_type" name="equipment_type">
+                    <option value="">Select Equipment Type</option>
+                    <option value="lifting_equipment" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'lifting_equipment') ? 'selected' : '' }}>
+                        Lifting Equipment
                     </option>
-                    <option value="mpi" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'mpi') ? 'selected' : '' }}>
-                        Magnetic Particle Inspection (MPI)
+                    <option value="pressure_vessel" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'pressure_vessel') ? 'selected' : '' }}>
+                        Pressure Vessel
                     </option>
-                    <option value="visual" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'visual') ? 'selected' : '' }}>
-                        Visual Inspection
+                    <option value="crane" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'crane') ? 'selected' : '' }}>
+                        Crane
                     </option>
-                    <option value="thorough_examination" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'thorough_examination') ? 'selected' : '' }}>
-                        Thorough Examination
+                    <option value="hoist" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'hoist') ? 'selected' : '' }}>
+                        Hoist
                     </option>
-                    <option value="load_test" {{ (old('inspection_type', $inspection->inspection_type ?? '') == 'load_test') ? 'selected' : '' }}>
-                        Load Test
+                    <option value="sling" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'sling') ? 'selected' : '' }}>
+                        Sling
+                    </option>
+                    <option value="other" {{ (old('equipment_type', $inspection->equipment_type ?? '') == 'other') ? 'selected' : '' }}>
+                        Other
                     </option>
                 </select>
-                @error('inspection_type')
+                @error('equipment_type')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>

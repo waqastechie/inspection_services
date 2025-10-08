@@ -4,20 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\Equipment;
 use App\Http\Controllers\Controller;
+use App\Services\EquipmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class EquipmentController extends Controller
 {
+    protected $equipmentService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param EquipmentService $equipmentService
+     */
+    public function __construct(EquipmentService $equipmentService)
+    {
+        $this->equipmentService = $equipmentService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $equipment = Equipment::with(['parentEquipment', 'items'])
-            ->orderBy('equipment_category', 'asc') // Assets first, then items
-            ->orderBy('name')
-            ->paginate(20);
+        $equipment = $this->equipmentService->getAllEquipment();
         return view('admin.equipment.index', compact('equipment'));
     }
 

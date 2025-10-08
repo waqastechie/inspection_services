@@ -22,7 +22,8 @@
         <!-- Consumables Table -->
         <div class="table-responsive">
             <table class="table table-striped" id="consumablesTable">
-                <thead class="table-dark">
+                <!-- Use light header with dark text for readability -->
+                <thead class="bg-light">
                     <tr>
                         <th>Description</th>
                         <th>Quantity</th>

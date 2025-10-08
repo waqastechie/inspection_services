@@ -23,8 +23,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    
     <!-- Custom CSS -->
-    <link href="{{ asset('css/validation.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/auto-save.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/equipment.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/pagination.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/modern-dashboard.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/modern-sidebar.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/tablet-responsive.css') }}?v={{ time() }}" rel="stylesheet">
+    <link href="{{ asset('css/validation.css') }}?v={{ time() }}" rel="stylesheet">
     
     <style>
         :root {
@@ -102,6 +112,23 @@
             background: linear-gradient(135deg, var(--light-bg) 0%, #e2e8f0 100%);
             border-bottom: 2px solid var(--border-color);
             font-weight: 600;
+            color: var(--text-primary) !important; /* ensure dark text on grey headers */
+        }
+
+        /* Accessibility contrast: prevent white text inside light/grey headers */
+        .card-header .text-white,
+        .bg-light .text-white,
+        .card.bg-light .text-white {
+            color: var(--text-primary) !important;
+        }
+
+        .card-header h1,
+        .card-header h2,
+        .card-header h3,
+        .card-header h4,
+        .card-header h5,
+        .card-header h6 {
+            color: var(--text-primary) !important;
         }
 
         /* Button Styles */
@@ -234,138 +261,259 @@
     @yield('styles')
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ route('dashboard') }}">
-                <i class="fas fa-cogs me-1 fa-sm"></i>
-                Inspection Services
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('dashboard') }}">
-                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <a href="{{ route('dashboard') }}" class="sidebar-brand">
+                    <i class="fas fa-cogs"></i>
+                    <span class="sidebar-brand-text">Inspection Services</span>
+                </a>
+            </div>
+
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar-nav">
+                <!-- Main Navigation -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('dashboard') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-tachometer-alt"></i>
+                            </div>
+                            <span class="nav-text">Dashboard</span>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('inspections.index') }}">
-                            <i class="fas fa-clipboard-list me-1"></i> Inspections
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('inspections.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <span class="nav-text">Inspections</span>
                         </a>
-                    </li>
-                    @if(auth()->user()->canApproveInspections())
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="qaDropdown" role="button" 
-                               data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-shield-check me-1"></i> QA Review
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="qaDropdown">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('qa.dashboard') }}">
-                                        <i class="fas fa-tachometer-alt me-2"></i> QA Dashboard
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('qa.pending') }}">
-                                        <i class="fas fa-clock me-2"></i> Pending Review
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('qa.under-review') }}">
-                                        <i class="fas fa-eye me-2"></i> Under Review
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('qa.history') }}">
-                                        <i class="fas fa-history me-2"></i> Review History
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    @endif
-                    @if(auth()->user()->isAdmin())
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('users.index') }}">
-                                <i class="fas fa-users me-1"></i> Users
-                            </a>
-                        </li>
-                    @endif
-                    @if(auth()->user()->isSuperAdmin())
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" 
-                               data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-cog me-1"></i> Admin
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                                <li><h6 class="dropdown-header">Resource Management</h6></li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.clients.index') }}">
-                                        <i class="fas fa-building me-2"></i> Clients
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.personnel.index') }}">
-                                        <i class="fas fa-user-tie me-2"></i> Personnel
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.equipment.index') }}">
-                                        <i class="fas fa-tools me-2"></i> Equipment
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.consumables.index') }}">
-                                        <i class="fas fa-box me-2"></i> Consumables
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">System Monitoring</h6></li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.logs.dashboard') }}">
-                                        <i class="fas fa-chart-line me-2"></i> Log Dashboard
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.logs.system') }}">
-                                        <i class="fas fa-exclamation-triangle me-2"></i> System Logs
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('admin.logs.activity') }}">
-                                        <i class="fas fa-user-clock me-2"></i> Activity Logs
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    @endif
-                </ul>
-                
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link position-relative" href="{{ route('notifications.index') }}">
-                            <i class="fas fa-bell me-1"></i> Notifications
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('notifications.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <span class="nav-text">Notifications</span>
                             @php
                                 $unreadCount = auth()->user()->unreadNotifications()->count();
                             @endphp
                             @if($unreadCount > 0)
-                                <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">{{ $unreadCount }}</span>
+                                <span class="nav-badge">{{ $unreadCount }}</span>
                             @endif
                         </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
-                           data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user me-1"></i>
-                            {{ auth()->user()->name }}
-                            <span class="badge bg-light text-dark ms-2">{{ ucfirst(auth()->user()->role) }}</span>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Quick Actions</div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('users.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <span class="nav-text">Manage Users</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('users.create') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <span class="nav-text">Add New User</span>
+                        </a>
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('inspections.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-list"></i>
+                            </div>
+                            <span class="nav-text">View All Inspections</span>
+                        </a>
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('inspections.create') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <span class="nav-text">New Inspection</span>
+                        </a>
+                    </div>
+                    
+                    @if(Auth::user()->canApproveInspections())
+                    <div class="nav-item">
+                        <a href="{{ route('qa.pending') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <span class="nav-text">QA Review Queue</span>
+                        </a>
+                    </div>
+                    @endif
+                    
+                    @if(Auth::user()->isSuperAdmin())
+                    <div class="nav-item">
+                        <a href="{{ route('admin.clients.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <span class="nav-text">Manage Clients</span>
+                        </a>
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('admin.personnel.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <span class="nav-text">Manage Personnel</span>
+                        </a>
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('admin.equipment.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <span class="nav-text">Manage Equipment</span>
+                        </a>
+                    </div>
+                    
+                    <div class="nav-item">
+                        <a href="{{ route('admin.consumables.index') }}" class="nav-link">
+                            <div class="nav-icon">
+                                <i class="fas fa-flask"></i>
+                            </div>
+                            <span class="nav-text">Manage Consumables</span>
+                        </a>
+                    </div>
+                    @endif
+                </div>
+
+                <!-- QA Review Section -->
+                @if(auth()->user()->canApproveInspections())
+                <div class="nav-section">
+                    <div class="nav-section-title">Quality Assurance</div>
+                    
+                    <div class="nav-item nav-dropdown">
+                        <a href="#" class="nav-link nav-dropdown-toggle">
+                            <div class="nav-icon">
+                                <i class="fas fa-shield-check"></i>
+                            </div>
+                            <span class="nav-text">QA Review</span>
+                            <i class="fas fa-chevron-down nav-dropdown-icon"></i>
+                        </a>
+                        <div class="nav-dropdown-menu">
+                            <a href="{{ route('qa.dashboard') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-tachometer-alt me-2"></i> QA Dashboard
+                            </a>
+                            <a href="{{ route('qa.pending') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-clock me-2"></i> Pending Review
+                            </a>
+                            <a href="{{ route('qa.under-review') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-eye me-2"></i> Under Review
+                            </a>
+                            <a href="{{ route('qa.history') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-history me-2"></i> Review History
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+
+
+                <!-- Admin Section -->
+                @if(auth()->user()->isSuperAdmin())
+                <div class="nav-section">
+                    <div class="nav-section-title">Administration</div>
+                    
+
+                    
+                    <div class="nav-item nav-dropdown">
+                        <a href="#" class="nav-link nav-dropdown-toggle">
+                            <div class="nav-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <span class="nav-text">System Monitoring</span>
+                            <i class="fas fa-chevron-down nav-dropdown-icon"></i>
+                        </a>
+                        <div class="nav-dropdown-menu">
+                            <a href="{{ route('admin.logs.dashboard') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-chart-line me-2"></i> Log Dashboard
+                            </a>
+                            <a href="{{ route('admin.logs.system') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-exclamation-triangle me-2"></i> System Logs
+                            </a>
+                            <a href="{{ route('admin.logs.activity') }}" class="nav-link nav-dropdown-item">
+                                <i class="fas fa-user-clock me-2"></i> Activity Logs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </nav>
+            
+            <!-- Sidebar Toggle Button at Bottom -->
+            <div class="sidebar-footer">
+                <button class="sidebar-toggle" type="button" aria-label="Collapse sidebar" title="Toggle sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay for Mobile -->
+        <div class="sidebar-overlay"></div>
+
+        <!-- Main Content Area -->
+        <div class="admin-content">
+            <!-- Top Header -->
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="mobile-sidebar-toggle" type="button">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <nav class="breadcrumb-nav">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                        @if(isset($breadcrumbs))
+                            @foreach($breadcrumbs as $breadcrumb)
+                                <span class="breadcrumb-separator">/</span>
+                                @if($loop->last)
+                                    <span>{{ $breadcrumb['title'] }}</span>
+                                @else
+                                    <a href="{{ $breadcrumb['url'] }}">{{ $breadcrumb['title'] }}</a>
+                                @endif
+                            @endforeach
+                        @endif
+                    </nav>
+                </div>
+                
+                <div class="header-right">
+                    <div class="user-menu">
+                        <button class="user-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="user-avatar">
+                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name">{{ auth()->user()->name }}</div>
+                                <div class="user-role">{{ ucfirst(auth()->user()->role) }}</div>
+                            </div>
+                            <i class="fas fa-chevron-down ms-2"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li>
                                 <a class="dropdown-item" href="#">
                                     <i class="fas fa-user-circle me-2"></i> Profile
@@ -376,97 +524,91 @@
                                     <i class="fas fa-cog me-2"></i> Settings
                                 </a>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
                         </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Flash Messages -->
-    @if(session('success'))
-        <div class="container mt-3">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="container mt-3">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="container mt-3">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Please fix the following errors:</strong>
-                <ul class="mb-0 mt-2">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        </div>
-    @endif
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container-fluid fade-in">
-            @yield('content')
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="mb-0">&copy; {{ date('Y') }} Inspection Services. All rights reserved.</p>
+                    </div>
                 </div>
-                <div class="col-md-6 text-end">
-                    <small class="text-muted">
-                        Powered by Laravel {{ app()->version() }} | 
-                        <i class="fas fa-shield-alt"></i> Secure System
-                    </small>
+            </header>
+
+            <!-- Flash Messages -->
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" aria-label="Close" data-bs-dismiss="alert"></button>
                 </div>
-            </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" aria-label="Close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            <!-- Main Content -->
+            <main class="main-content">
+                @yield('content')
+            </main>
+
+            <!-- Footer -->
+            <footer class="admin-footer">
+                <div class="footer-content">
+                    <div class="footer-left">
+                        <p>&copy; {{ date('Y') }} Inspection Services. All rights reserved.</p>
+                    </div>
+                    <div class="footer-right">
+                        <p>Version 1.0.0</p>
+                    </div>
+                </div>
+            </footer>
         </div>
-    </footer>
+    </div>
 
-    <!-- Bootstrap JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-        crossorigin="anonymous"></script>
-
-    <!-- Alpine.js for reactive validation -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <!-- Custom JavaScript -->
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- DataTables JavaScript -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="{{ asset('js/modern-sidebar.js') }}"></script>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-hide alerts after 5 seconds
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
-                setTimeout(function() {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 5000);
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
             });
+        }, 5000);
 
-            // Add fade-in animation to main content
+        // Add fade-in animation to main content
+        document.addEventListener('DOMContentLoaded', function() {
             const mainContent = document.querySelector('.main-content');
             if (mainContent) {
-                mainContent.classList.add('fade-in');
+                mainContent.style.opacity = '0';
+                mainContent.style.transform = 'translateY(20px)';
+                mainContent.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                
+                setTimeout(function() {
+                    mainContent.style.opacity = '1';
+                    mainContent.style.transform = 'translateY(0)';
+                }, 100);
             }
         });
     </script>

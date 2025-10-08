@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +11,6 @@ class MpiInspection extends Model
 
     protected $fillable = [
         'inspection_id',
-        // Remove inspection_service_id since we don't need the intermediate table
         'inspector_id',
         'contrast_paint_method',
         'ink_powder_1_method',
@@ -32,6 +30,15 @@ class MpiInspection extends Model
         'initial_demagnetisation',
         'final_demagnetisation',
         'mpi_results',
+        // New MPI service fields
+        'mpi_service_inspector',
+        'visual_inspector',
+        'visual_comments',
+        'visual_method',
+        'visual_lighting',
+        'visual_equipment',
+        'visual_conditions',
+        'visual_results',
     ];
 
     /**

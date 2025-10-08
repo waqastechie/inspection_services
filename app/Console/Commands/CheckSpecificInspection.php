@@ -86,7 +86,7 @@ class CheckSpecificInspection extends Command
             // Check related data
             $this->newLine();
             $this->info('=== RELATED DATA ===');
-            $this->line("Services: " . $inspection->services()->count());
+            $this->line("Services: " . $inspection->services->count());
             $this->line("Personnel Assignments: " . $inspection->personnelAssignments()->count());
             $this->line("Equipment Assignments: " . $inspection->equipmentAssignments()->count());
             $this->line("Consumable Assignments: " . $inspection->consumableAssignments()->count());

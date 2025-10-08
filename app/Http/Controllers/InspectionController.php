@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -19,6 +18,7 @@ use App\Models\EquipmentType;
 use App\Models\ConsumableAssignment;
 use App\Models\Personnel;
 use App\Http\Requests\StoreInspectionRequest;
+use App\Http\Requests\SaveInspectionEquipmentRequest;
 use App\Http\Requests\UpdateInspectionRequest;
 use App\Services\ImageUploadService;
 use App\Models\InspectionResult;
@@ -62,7 +62,6 @@ class InspectionController extends Controller
     {
         $inspection = Inspection::with([
             'client',
-            'services',
             'personnelAssignments',
             'equipmentAssignments.equipment',
             'consumableAssignments',
@@ -82,37 +81,44 @@ class InspectionController extends Controller
      */
     public function edit($id)
     {
-        $inspection = Inspection::with([
-            'client',
-            'services',
-            'personnelAssignments',
-            'equipmentAssignments',
-            'consumableAssignments',
-            'inspectionResults',
-            'images'
-        ])->findOrFail($id);
-
-        return view('inspections.edit', compact('inspection'));
+        // Redirect to main edit wizard instead of old edit form
+        return redirect()->route('inspections.edit-wizard-main.step', ['inspection' => $id, 'step' => 1]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateInspectionRequest $request, $id)
     {
+        $validated = $request->validated();
+
         try {
             DB::beginTransaction();
-            
+
             $inspection = Inspection::findOrFail($id);
-            
-            $inspection->update([
-                'client_id' => $request->client_id,
-                'project_name' => $request->project_name,
-                'location' => $request->location,
-                'lead_inspector_name' => $request->lead_inspector_name ?? 'Inspector',
-                'lead_inspector_certification' => $request->lead_inspector_certification ?? 'Certified Inspector',
-                'status' => $request->status ?? $inspection->status,
-            ]);
+
+            $updates = [
+                'client_id' => $validated['client_id'],
+                'project_name' => array_key_exists('project_name', $validated)
+                    ? $validated['project_name']
+                    : $inspection->project_name,
+                'location' => array_key_exists('location', $validated)
+                    ? $validated['location']
+                    : $inspection->location,
+                'status' => array_key_exists('status', $validated)
+                    ? ($validated['status'] ?? $inspection->status)
+                    : $inspection->status,
+            ];
+
+            $updates['lead_inspector_name'] = array_key_exists('lead_inspector_name', $validated)
+                ? ($validated['lead_inspector_name'] ?? 'Inspector')
+                : ($inspection->lead_inspector_name ?? 'Inspector');
+
+            $updates['lead_inspector_certification'] = array_key_exists('lead_inspector_certification', $validated)
+                ? ($validated['lead_inspector_certification'] ?? 'Certified Inspector')
+                : ($inspection->lead_inspector_certification ?? 'Certified Inspector');
+
+            $inspection->update($updates);
 
             DB::commit();
 
@@ -121,7 +127,7 @@ class InspectionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'An error occurred while updating the inspection: ' . $e->getMessage())
                 ->withInput();
@@ -457,6 +463,354 @@ class InspectionController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Show the main edit wizard for the specified inspection.
+     */
+    public function editWizardMain($id, $step = 1)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'personnelAssignments.personnel',
+            'equipmentAssignments.equipment',
+            'consumableAssignments.consumable',
+            'inspectionResults',
+            'images',
+            'liftingExamination',
+            'mpiInspection',
+            'inspectionEquipment',
+            'equipmentType',
+            'otherTest'
+        ])->findOrFail($id);
+
+        // Only allow edit for super admin, inspector, or QA
+        $user = auth()->user();
+        if (!($user->isSuperAdmin() || $user->isInspector() || $user->role === 'qa')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $currentStep = (int) $step;
+        $totalSteps = 4;
+
+        // Define wizard steps for main edit wizard
+        $steps = [
+            1 => [
+                'title' => 'Client Information & Job Details', 
+                'description' => 'Update client information and job details',
+                'view' => 'inspections.edit-wizard-main.step1'
+            ],
+            2 => [
+                'title' => 'Services & Examinations', 
+                'description' => 'Update inspection services and examinations',
+                'view' => 'inspections.edit-wizard-main.step2'
+            ],
+            3 => [
+                'title' => 'Equipment & Asset Details', 
+                'description' => 'Update equipment and asset information',
+                'view' => 'inspections.edit-wizard-main.step3'
+            ],
+            4 => [
+                'title' => 'Items, Consumables & Documentation', 
+                'description' => 'Update items, consumables, comments and images',
+                'view' => 'inspections.edit-wizard-main.step4'
+            ]
+        ];
+
+        // Get additional data needed for the wizard
+        $personnel = \App\Models\Personnel::all();
+        $clients = \App\Models\Client::all();
+        $consumables = \App\Models\Consumable::all();
+        $users = \App\Models\User::all();
+        $equipment = \App\Models\Equipment::all();
+        
+        // Define available service types (since we use individual service tables)
+        $services = [
+            ['id' => 'mpi', 'name' => 'Magnetic Particle Inspection', 'type' => 'mpi'],
+            ['id' => 'lifting_examination', 'name' => 'Lifting Examination', 'type' => 'lifting_examination'],
+            ['id' => 'load_test', 'name' => 'Load Test', 'type' => 'load_test'],
+            ['id' => 'visual_inspection', 'name' => 'Visual Inspection', 'type' => 'visual'],
+            ['id' => 'thorough_examination', 'name' => 'Thorough Examination', 'type' => 'thorough_examination'],
+        ];
+        
+        $equipmentTypes = \App\Models\EquipmentType::all();
+
+        return view('inspections.edit-wizard-main', compact(
+            'inspection',
+            'currentStep',
+            'totalSteps',
+            'steps',
+            'personnel',
+            'clients',
+            'consumables',
+            'users',
+            'equipment',
+            'services',
+            'equipmentTypes'
+        ));
+    }
+
+    /**
+     * Show the edit wizard for the specified inspection.
+     */
+    public function editWizard($id, $step = 1)
+    {
+        $inspection = Inspection::with([
+            'client',
+            'personnelAssignments.personnel',
+            'equipmentAssignments.equipment',
+            'consumableAssignments.consumable',
+            'inspectionResults',
+            'images'
+        ])->findOrFail($id);
+
+        // Only allow edit for super admin, inspector, or QA
+        $user = auth()->user();
+        if (!($user->isSuperAdmin() || $user->isInspector() || $user->role === 'qa')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $currentStep = (int) $step;
+        $totalSteps = 7;
+
+        // Define wizard steps (0-based indexing to match view expectations)
+        $steps = [
+            0 => ['title' => 'Client Information', 'description' => 'Update client and project details'],
+            1 => ['title' => 'Services', 'description' => 'Update inspection services'],
+            2 => ['title' => 'Equipment Assignments', 'description' => 'Update assigned equipment'],
+            3 => ['title' => 'Equipment Details', 'description' => 'Update equipment information'],
+            4 => ['title' => 'Consumables', 'description' => 'Update consumables used'],
+            5 => ['title' => 'Images & Documentation', 'description' => 'Update images and documentation'],
+            6 => ['title' => 'Review & Submit', 'description' => 'Review and finalize changes']
+        ];
+
+        // Get additional data needed for the wizard
+        $personnel = \App\Models\Personnel::all();
+        $clients = \App\Models\Client::all();
+        $consumables = \App\Models\Consumable::all();
+        $users = \App\Models\User::all();
+        $equipment = \App\Models\Equipment::all();
+
+        return view('inspections.edit-wizard', compact(
+            'inspection',
+            'currentStep',
+            'totalSteps',
+            'steps',
+            'personnel',
+            'clients',
+            'consumables',
+            'users',
+            'equipment'
+        ));
+    }
+
+    /**
+     * Save a step in the edit wizard.
+     */
+    public function saveEditWizardStep(Request $request, $id)
+    {
+        $step = $request->input('step', 1);
+        $inspection = Inspection::findOrFail($id);
+
+        // Only allow edit for super admin, inspector, or QA
+        $user = auth()->user();
+        if (!($user->isSuperAdmin() || $user->isInspector() || $user->role === 'qa')) {
+            abort(403, 'Unauthorized');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Handle different steps
+            switch ($step) {
+                case 1:
+                    // Client Information
+                    $inspection->update([
+                        'client_id' => $request->input('client_id'),
+                        'project_name' => $request->input('project_name'),
+                        'location' => $request->input('location'),
+                        'inspection_date' => $request->input('inspection_date'),
+                        'service_type' => $request->input('service_type'),
+                    ]);
+                    break;
+
+                case 2:
+                    // Services - handle service-specific data
+                    if ($inspection->service_type === 'lifting_examination') {
+                        $this->saveLiftingExaminationData($inspection, $request);
+                    } elseif ($inspection->service_type === 'mpi') {
+                        $this->saveMPIData($inspection, $request);
+                    } elseif ($inspection->service_type === 'load_test') {
+                        $this->saveLoadTestData($inspection, $request);
+                    } elseif ($inspection->service_type === 'thorough_examination') {
+                        $this->saveThoroughExaminationData($inspection, $request);
+                    }
+                    break;
+
+                case 3:
+                    // Equipment Assignments
+                    if ($request->has('equipment_data')) {
+                        $this->saveEquipmentAssignments($inspection, $request->input('equipment_data'));
+                    }
+                    break;
+
+                case 4:
+                    // Equipment Details
+                    if ($request->has('equipment_data')) {
+                        $this->saveInspectionEquipment($inspection, $request->input('equipment_data'));
+                    }
+                    break;
+
+                case 5:
+                    // Consumables
+                    if ($request->has('consumables')) {
+                        $this->saveConsumablesData($inspection, $request->input('consumables'));
+                    }
+                    break;
+
+                case 6:
+                    // Images & Documentation
+                    $this->saveInspectionImages($inspection, $request);
+                    break;
+
+                case 7:
+                    // Final review and submission
+                    $inspection->update([
+                        'status' => $request->input('status', 'completed'),
+                        'updated_at' => now()
+                    ]);
+                    break;
+            }
+
+            DB::commit();
+
+            // Determine redirect
+            if ($step == 7 || $request->input('action') === 'finish') {
+                return redirect()->route('inspections.show', $inspection->id)
+                    ->with('success', 'Inspection updated successfully');
+            } else {
+                // Go to next step
+                return redirect()->route('inspections.edit-wizard.step', [
+                    'id' => $inspection->id,
+                    'step' => $step + 1
+                ])->with('success', 'Step saved successfully');
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Error saving wizard step: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Save a step in the main edit wizard.
+     */
+    public function saveEditWizardMainStep(Request $request, $id)
+    {
+        $step = $request->input('step', 1);
+        $inspection = Inspection::findOrFail($id);
+
+        // Only allow edit for super admin, inspector, or QA
+        $user = auth()->user();
+        if (!($user->isSuperAdmin() || $user->isInspector() || $user->role === 'qa')) {
+            abort(403, 'Unauthorized');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Handle different steps
+            switch ($step) {
+                case 1:
+                    // Client Information & Job Details
+                    $inspection->update([
+                        'client_id' => $request->input('client_id'),
+                        'project_name' => $request->input('project_name'),
+                        'location' => $request->input('location'),
+                        'inspection_date' => $request->input('inspection_date'),
+                        'service_type' => $request->input('service_type'),
+                        'job_number' => $request->input('job_number'),
+                        'po_number' => $request->input('po_number'),
+                        'description' => $request->input('description'),
+                    ]);
+                    break;
+
+                case 2:
+                    // Services & Examinations
+                    // Handle service-specific data
+                    if ($inspection->service_type === 'lifting_examination') {
+                        $this->saveLiftingExaminationData($inspection, $request);
+                    } elseif ($inspection->service_type === 'mpi') {
+                        $this->saveMPIData($inspection, $request);
+                    } elseif ($inspection->service_type === 'load_test') {
+                        $this->saveLoadTestData($inspection, $request);
+                    } elseif ($inspection->service_type === 'thorough_examination') {
+                        $this->saveThoroughExaminationData($inspection, $request);
+                    }
+                    
+                    // Handle visual inspection data
+                    if ($request->has('visual_inspection_data')) {
+                        $this->saveVisualInspectionData($inspection, $request);
+                    }
+                    break;
+
+                case 3:
+                    // Equipment & Asset Details
+                    if ($request->has('equipment_data')) {
+                        $this->saveInspectionEquipment($inspection, $request->input('equipment_data'));
+                    }
+                    
+                    // Handle equipment assignments
+                    if ($request->has('equipment_assignments')) {
+                        $this->saveEquipmentAssignments($inspection, $request->input('equipment_assignments'));
+                    }
+                    break;
+
+                case 4:
+                    // Items, Consumables, Comments & Images
+                    
+                    // Handle consumables
+                    if ($request->has('consumables')) {
+                        $this->saveConsumablesData($inspection, $request->input('consumables'));
+                    }
+                    
+                    // Handle comments
+                    if ($request->has('comments')) {
+                        $inspection->update(['comments' => $request->input('comments')]);
+                    }
+                    
+                    // Handle images
+                    $this->saveInspectionImages($inspection, $request);
+                    
+                    // Handle items table data
+                    if ($request->has('items_data')) {
+                        $this->saveItemsData($inspection, $request->input('items_data'));
+                    }
+                    break;
+            }
+
+            DB::commit();
+
+            // Determine redirect
+            if ($step == 4 || $request->input('action') === 'finish') {
+                return redirect()->route('inspections.show', $inspection->id)
+                    ->with('success', 'Inspection updated successfully');
+            } else {
+                // Go to next step
+                return redirect()->route('inspections.edit-wizard-main.step', [
+                    'inspection' => $inspection->id,
+                    'step' => $step + 1
+                ])->with('success', 'Step saved successfully');
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Error saving wizard step: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
     public function saveDraft(Request $request)
     {
         try {
@@ -509,7 +863,6 @@ class InspectionController extends Controller
         try {
             $inspection = Inspection::with([
                 'client',
-                'services',
                 'personnelAssignments.personnel',
                 'equipmentAssignments.equipment',
                 'consumableAssignments.consumable',
@@ -563,7 +916,6 @@ class InspectionController extends Controller
     {
         $inspection = Inspection::with([
             'client',
-            'services',
             'personnelAssignments.personnel',
             'equipmentAssignments.equipment',
             'consumableAssignments.consumable',
@@ -606,6 +958,36 @@ class InspectionController extends Controller
                 'success' => false,
                 'message' => 'Error deleting image: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Download inspection file
+     */
+    public function downloadFile($inspection, $file)
+    {
+        try {
+            // Find the inspection
+            $inspectionRecord = Inspection::findOrFail($inspection);
+            
+            // Find the file record
+            $fileRecord = \App\Models\InspectionImage::where('inspection_id', $inspection)
+                ->where('id', $file)
+                ->firstOrFail();
+            
+            // Get the file path
+            $filePath = storage_path('app/public/' . $fileRecord->file_path);
+            
+            // Check if file exists
+            if (!file_exists($filePath)) {
+                abort(404, 'File not found');
+            }
+            
+            // Return file download response
+            return response()->download($filePath, $fileRecord->original_name);
+            
+        } catch (\Exception $e) {
+            abort(404, 'File not found');
         }
     }
 
@@ -1399,6 +1781,123 @@ class InspectionController extends Controller
                 );
             }
         }
+
+        // Persist Load Test values to the dedicated load_tests table
+        if ($request->hasAny([
+            'load_test_duration',
+            'load_test_two_points_diagonal',
+            'load_test_four_points',
+            'load_test_deflection',
+            'load_test_deformation',
+            'load_test_distance_from_ground',
+            'load_test_result',
+        ])) {
+            $loadTestData = array_filter([
+                // Map request fields to LoadTest model attributes
+                'duration_held' => $request->input('load_test_duration'),
+                'two_points_diagonal' => $request->input('load_test_two_points_diagonal'),
+                'four_points' => $request->input('load_test_four_points'),
+                'deflection' => $request->input('load_test_deflection'),
+                'deformation' => $request->input('load_test_deformation'),
+                'distance_from_ground' => $request->input('load_test_distance_from_ground'),
+                'result' => $request->input('load_test_result'),
+            ], function ($value) {
+                return $value !== null && $value !== '';
+            });
+
+            if (!empty($loadTestData)) {
+                \App\Models\LoadTest::updateOrCreate(
+                    ['inspection_id' => $inspection->id],
+                    array_merge(['inspection_id' => $inspection->id], $loadTestData)
+                );
+            }
+        }
+
+        // Persist Other Tests values to the dedicated other_tests table
+        if ($request->hasAny([
+            // Drop Test
+            'drop_test_load',
+            'drop_type',
+            'drop_distance',
+            'drop_suspended',
+            'drop_impact_speed',
+            'drop_result',
+            'drop_notes',
+            // Tilt Test
+            'tilt_test_load',
+            'loaded_tilt',
+            'empty_tilt',
+            'tilt_results',
+            'tilt_stability',
+            'tilt_direction',
+            'tilt_duration',
+            'tilt_notes',
+            // Lowering Test
+            'lowering_test_load',
+            'lowering_impact_speed',
+            'lowering_result',
+            'lowering_method',
+            'lowering_distance',
+            'lowering_duration',
+            'lowering_cycles',
+            'brake_efficiency',
+            'control_response',
+            'lowering_notes',
+            // Other Test generic fields
+            'other_test_inspector',
+            'other_test_method',
+            'other_test_equipment',
+            'other_test_conditions',
+            'other_test_results',
+            'other_test_comments',
+        ])) {
+            $otherTestData = array_filter([
+                // Drop Test
+                'drop_test_load' => $request->input('drop_test_load'),
+                'drop_type' => $request->input('drop_type'),
+                'drop_distance' => $request->input('drop_distance'),
+                'drop_suspended' => $request->input('drop_suspended'),
+                'drop_impact_speed' => $request->input('drop_impact_speed'),
+                'drop_result' => $request->input('drop_result'),
+                'drop_notes' => $request->input('drop_notes'),
+                // Tilt Test
+                'tilt_test_load' => $request->input('tilt_test_load'),
+                'loaded_tilt' => $request->input('loaded_tilt'),
+                'empty_tilt' => $request->input('empty_tilt'),
+                'tilt_results' => $request->input('tilt_results'),
+                'tilt_stability' => $request->input('tilt_stability'),
+                'tilt_direction' => $request->input('tilt_direction'),
+                'tilt_duration' => $request->input('tilt_duration'),
+                'tilt_notes' => $request->input('tilt_notes'),
+                // Lowering Test
+                'lowering_test_load' => $request->input('lowering_test_load'),
+                'lowering_impact_speed' => $request->input('lowering_impact_speed'),
+                'lowering_result' => $request->input('lowering_result'),
+                'lowering_method' => $request->input('lowering_method'),
+                'lowering_distance' => $request->input('lowering_distance'),
+                'lowering_duration' => $request->input('lowering_duration'),
+                'lowering_cycles' => $request->input('lowering_cycles'),
+                'brake_efficiency' => $request->input('brake_efficiency'),
+                'control_response' => $request->input('control_response'),
+                'lowering_notes' => $request->input('lowering_notes'),
+                // Other Test generic fields
+                'other_test_inspector' => $request->input('other_test_inspector'),
+                'other_test_method' => $request->input('other_test_method'),
+                'other_test_equipment' => $request->input('other_test_equipment'),
+                'other_test_conditions' => $request->input('other_test_conditions'),
+                'other_test_results' => $request->input('other_test_results'),
+                'other_test_comments' => $request->input('other_test_comments'),
+            ], function ($value) {
+                return $value !== null && $value !== '';
+            });
+
+            if (!empty($otherTestData)) {
+                \App\Models\OtherTest::updateOrCreate(
+                    ['inspection_id' => $inspection->id],
+                    array_merge(['inspection_id' => $inspection->id], $otherTestData)
+                );
+            }
+        }
     }
 
     /**
@@ -1436,39 +1935,29 @@ class InspectionController extends Controller
     /**
      * Save equipment data for an inspection
      */
-    public function saveEquipmentOnly(Request $request)
+    public function saveEquipmentOnly(SaveInspectionEquipmentRequest $request)
     {
+        $validated = $request->validated();
+        $inspectionId = (int) $validated['inspection_id'];
+        $equipmentData = $validated['equipment_data'] ?? [];
+
         try {
-            $inspectionId = $request->input('inspection_id');
-            $equipmentData = $request->input('equipment_data');
-            
-            if (!$inspectionId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Inspection ID is required'
-                ], 400);
-            }
-            
-            // Find the inspection
-            $inspection = Inspection::find($inspectionId);
-            if (!$inspection) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Inspection not found'
-                ], 404);
-            }
-            
-            // Clear existing equipment for this inspection
-            \DB::table('inspection_equipment')->where('inspection_id', $inspectionId)->delete();
-            
-            // Save new equipment data
-            if (!empty($equipmentData)) {
+            $inspection = Inspection::findOrFail($inspectionId);
+
+            DB::transaction(function () use ($inspection, $equipmentData) {
+                InspectionEquipment::where('inspection_id', $inspection->id)->delete();
+
+                if (empty($equipmentData)) {
+                    return;
+                }
+
                 foreach ($equipmentData as $item) {
-                    \DB::table('inspection_equipment')->insert([
-                        'inspection_id' => $inspectionId,
+                    $payload = [
+                        'inspection_id' => $inspection->id,
                         'client_id' => $inspection->client_id,
-                        'equipment_type_id' => $item['equipment_type_id'] ?: null,
-                        'category' => $item['category'] ?? '',
+                        'equipment_type_id' => $item['equipment_type_id'] ?? null,
+                        'parent_equipment_id' => $item['parent_equipment_id'] ?? null,
+                        'category' => $item['category'] ?? 'item',
                         'equipment_type' => $item['equipment_type'] ?? '',
                         'serial_number' => $item['serial_number'] ?? '',
                         'description' => $item['description'] ?? '',
@@ -1476,33 +1965,59 @@ class InspectionController extends Controller
                         'model' => $item['model'] ?? '',
                         'swl' => $item['swl'] ?? null,
                         'test_load_applied' => $item['test_load_applied'] ?? null,
-                        'date_of_manufacture' => $item['date_of_manufacture'] ?: null,
-                        'date_of_last_examination' => $item['date_of_last_examination'] ?: null,
-                        'date_of_next_examination' => $item['date_of_next_examination'] ?: null,
+                        'date_of_manufacture' => $item['date_of_manufacture'] ?? null,
+                        'date_of_last_examination' => $item['date_of_last_examination'] ?? null,
+                        'date_of_next_examination' => $item['date_of_next_examination'] ?? null,
                         'status' => $item['status'] ?? '',
                         'remarks' => $item['remarks'] ?? '',
                         'condition' => $item['condition'] ?? 'Good',
-                        'metadata' => json_encode($item),
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
+                        'metadata' => $item,
+                    ];
+
+                    foreach (['equipment_type_id', 'parent_equipment_id'] as $key) {
+                        if (empty($payload[$key])) {
+                            $payload[$key] = null;
+                        }
+                    }
+
+                    foreach (['swl', 'test_load_applied'] as $key) {
+                        if ($payload[$key] === '') {
+                            $payload[$key] = null;
+                        }
+                    }
+
+                    foreach ([
+                        'date_of_manufacture',
+                        'date_of_last_examination',
+                        'date_of_next_examination',
+                    ] as $dateField) {
+                        if (empty($payload[$dateField])) {
+                            $payload[$dateField] = null;
+                        }
+                    }
+
+                    InspectionEquipment::create($payload);
                 }
-            }
-            
+            });
+
             return response()->json([
                 'success' => true,
                 'message' => 'Equipment data saved successfully',
-                'equipment_count' => count($equipmentData ?: [])
+                'equipment_count' => count($equipmentData),
             ]);
-            
-        } catch (\Exception $e) {
-            \Log::error('Error saving equipment data: ' . $e->getMessage());
-            
+
+        } catch (\Throwable $e) {
+            Log::error('Error saving equipment data', [
+                'message' => $e->getMessage(),
+                'inspection_id' => $inspectionId,
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to save equipment data: ' . $e->getMessage()
+                'message' => 'Failed to save equipment data: ' . $e->getMessage(),
             ], 500);
         }
     }
+
 
 }

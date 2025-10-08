@@ -133,13 +133,13 @@
                                                        class="btn btn-outline-primary" title="View Details">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    @if(auth()->user()->isSuperAdmin())
+                                                    @if(auth()->user()->isSuperAdmin() || auth()->user()->role === 'qa')
                                                         <a href="{{ route('inspections.edit', $inspection->id) }}" 
                                                            class="btn btn-outline-warning" title="Edit Report">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                     @endif
-                                                    @if($inspection->status == 'qa' && auth()->user()->isSuperAdmin())
+                                                    @if($inspection->status == 'qa' && (auth()->user()->isSuperAdmin() || auth()->user()->role === 'qa'))
                                                         <form method="POST" action="{{ route('inspections.complete', $inspection->id) }}" style="display: inline;">
                                                             @csrf
                                                             @method('PATCH')

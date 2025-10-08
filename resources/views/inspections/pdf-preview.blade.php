@@ -300,7 +300,7 @@
         <tbody>
             @foreach($inspection->personnelAssignments as $assignment)
             <tr>
-                <td>{{ $assignment->personnel->name ?? 'N/A' }}</td>
+                <td>{{ $assignment->personnel->full_name ?? 'N/A' }}</td>
                 <td>{{ $assignment->personnel->position ?? 'N/A' }}</td>
                 <td>{{ $assignment->personnel->certification ?? 'N/A' }}</td>
                 <td>{{ $assignment->personnel->certification_expiry ? $assignment->personnel->certification_expiry->format('M j, Y') : 'N/A' }}</td>

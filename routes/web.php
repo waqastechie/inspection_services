@@ -11,6 +11,7 @@ use App\Http\Controllers\ConsumableController;
 use App\Http\Controllers\ClientController;
 use App\Models\Client;
 use App\Models\Inspection;
+use App\Http\Controllers\LoadTestController;
 
 // Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -1439,6 +1440,18 @@ Route::middleware('auth')->group(function () {
             Route::post('/link-items', [InspectionController::class, 'linkItemsToEquipment'])->name('link-items');
         });
         
+        // Edit Wizard Routes
+        Route::prefix('edit-wizard')->name('edit-wizard.')->group(function () {
+            Route::get('/{inspection}/step/{step?}', [InspectionController::class, 'editWizard'])->name('step');
+            Route::post('/{inspection}/save', [InspectionController::class, 'saveEditWizardStep'])->name('save');
+        });
+        
+        // Main Edit Wizard Routes
+        Route::prefix('edit-wizard-main')->name('edit-wizard-main.')->group(function () {
+            Route::get('/{inspection}/step/{step?}', [InspectionController::class, 'editWizardMain'])->name('step');
+            Route::post('/{inspection}/save', [InspectionController::class, 'saveEditWizardMainStep'])->name('save');
+        });
+        
         // Equipment save route
         Route::post('/save-equipment', [InspectionController::class, 'saveEquipmentOnly'])->name('save-equipment');
         
@@ -1465,6 +1478,9 @@ Route::middleware('auth')->group(function () {
         // Image Management
         Route::delete('/images/{imageId}', [InspectionController::class, 'deleteImage'])->name('images.delete');
         Route::patch('/images/{imageId}/caption', [InspectionController::class, 'updateImageCaption'])->name('images.caption');
+        
+        // File Download
+        Route::get('/{inspection}/files/{file}/download', [InspectionController::class, 'downloadFile'])->name('file.download');
         
         // API Routes for dropdowns
         Route::get('/api/personnel', [InspectionController::class, 'getPersonnel'])->name('api.personnel');
@@ -1771,3 +1787,6 @@ Route::get('/debug-api', function() {
 Route::get('/test-equipment-modal', function () {
     return view('test-equipment-modal');
 });
+
+// Form submission route for LoadTest
+Route::post('/load-test/store', [LoadTestController::class, 'store'])->name('load-test.store');

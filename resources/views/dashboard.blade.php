@@ -1,8 +1,9 @@
-@extends('layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Dashboard - Inspection Services')
 
 @push('styles')
+<link href="{{ asset('css/modern-dashboard.css') }}" rel="stylesheet">
 <style>
     .btn-outline-secondary:hover {
         color: #6c757d !important;
@@ -20,7 +21,8 @@
 @endpush
 
 @section('content')
-<div class="container mt-4">
+<div class="modern-dashboard">
+<div class="container-fluid p-4">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -38,66 +40,66 @@
     @if(Auth::user()->isAdmin())
         <!-- Admin Dashboard -->
         <div class="row g-4 mb-4">
-            <!-- Stats Cards -->
+            <!-- Modern Stats Cards -->
             <div class="col-md-3">
-                <div class="card bg-primary text-white h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6 class="card-title">Total Users</h6>
-                                <h2 class="mb-0">{{ App\Models\User::count() }}</h2>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-users fa-2x opacity-75"></i>
-                            </div>
+                <div class="stats-card primary">
+                    <div class="stats-card-body">
+                        <div class="stats-card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stats-card-title">Total Users</div>
+                        <div class="stats-card-value">{{ App\Models\User::count() }}</div>
+                        <div class="stats-card-trend positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Active system users</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6 class="card-title">Active Clients</h6>
-                                <h2 class="mb-0">{{ App\Models\Client::active()->count() }}</h2>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-building fa-2x opacity-75"></i>
-                            </div>
+                <div class="stats-card success">
+                    <div class="stats-card-body">
+                        <div class="stats-card-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="stats-card-title">Active Clients</div>
+                        <div class="stats-card-value">{{ App\Models\Client::active()->count() }}</div>
+                        <div class="stats-card-trend positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>Engaged clients</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6 class="card-title">Personnel</h6>
-                                <h2 class="mb-0">{{ App\Models\Personnel::active()->count() }}</h2>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-user-tie fa-2x opacity-75"></i>
-                            </div>
+                <div class="stats-card info">
+                    <div class="stats-card-body">
+                        <div class="stats-card-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stats-card-title">Personnel</div>
+                        <div class="stats-card-value">{{ App\Models\Personnel::active()->count() }}</div>
+                        <div class="stats-card-trend positive">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Certified staff</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-3">
-                <div class="card bg-warning text-dark">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6 class="card-title">Total Inspections</h6>
-                                <h2 class="mb-0">{{ App\Models\Inspection::count() }}</h2>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
-                            </div>
+                <div class="stats-card warning">
+                    <div class="stats-card-body">
+                        <div class="stats-card-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="stats-card-title">Total Inspections</div>
+                        <div class="stats-card-value">{{ App\Models\Inspection::count() }}</div>
+                        <div class="stats-card-trend positive">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Completed reports</span>
                         </div>
                     </div>
                 </div>
@@ -245,60 +247,72 @@
         <!-- QA Status Overview -->
         <div class="row g-4 mb-4">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
+                <div class="modern-card">
+                    <div class="modern-card-header">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-shield-check me-2"></i>QA Status Overview
+                            <i class="fas fa-chart-pie me-2"></i>QA Status Overview
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="modern-card-body">
                         <div class="row g-3">
                             <div class="col-md-2">
-                                <div class="card bg-warning text-dark">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::where('qa_status', 'pending_qa')->count() }}</h4>
-                                        <small>Pending QA</small>
+                                <div class="qa-status-card pending">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-clock"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::where('qa_status', 'pending_qa')->count() }}</div>
+                                    <div class="qa-status-label">Pending QA</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <div class="card bg-info text-white">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::where('qa_status', 'under_qa_review')->count() }}</h4>
-                                        <small>Under Review</small>
+                                <div class="qa-status-card under-review">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-search"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::where('qa_status', 'under_qa_review')->count() }}</div>
+                                    <div class="qa-status-label">Under Review</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::where('qa_status', 'qa_approved')->count() }}</h4>
-                                        <small>Approved</small>
+                                <div class="qa-status-card approved">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-check-circle"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::where('qa_status', 'qa_approved')->count() }}</div>
+                                    <div class="qa-status-label">Approved</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <div class="card bg-danger text-white">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::where('qa_status', 'qa_rejected')->count() }}</h4>
-                                        <small>Rejected</small>
+                                <div class="qa-status-card rejected">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-times-circle"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::where('qa_status', 'qa_rejected')->count() }}</div>
+                                    <div class="qa-status-label">Rejected</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <div class="card bg-secondary text-white">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::where('qa_status', 'revision_required')->count() }}</h4>
-                                        <small>Needs Revision</small>
+                                <div class="qa-status-card needs-revision">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-edit"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::where('qa_status', 'revision_required')->count() }}</div>
+                                    <div class="qa-status-label">Needs Revision</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <div class="card bg-primary text-white">
-                                    <div class="card-body text-center py-3">
-                                        <h4 class="mb-1">{{ App\Models\Inspection::whereNotNull('qa_status')->count() }}</h4>
-                                        <small>Total QA</small>
+                                <div class="qa-status-card total">
+                                    <div class="qa-status-icon">
+                                        <i class="fas fa-list-alt"></i>
                                     </div>
+                                    <div class="qa-status-value">{{ App\Models\Inspection::whereNotNull('qa_status')->count() }}</div>
+                                    <div class="qa-status-label">Total QA</div>
+                                    <div class="qa-status-indicator"></div>
                                 </div>
                             </div>
                         </div>
@@ -307,22 +321,31 @@
             </div>
         </div>
 
-        <!-- Notifications -->
-        @include('components.notifications', ['limit' => 10])
-
-        <!-- Recent QA Activities -->
-        <div class="row g-4 mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-bell me-2"></i>Recent QA Activities
+        <!-- Notifications and Recent Activities -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="modern-card">
+                    <div class="modern-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bell me-2"></i>
+                            Notifications
                         </h5>
-                        <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye me-1"></i>View All
-                        </a>
                     </div>
-                    <div class="card-body">
+                    <div class="modern-card-body">
+                        @include('components.notifications', ['limit' => 5])
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="modern-card">
+                    <div class="modern-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Recent QA Activities
+                        </h5>
+                    </div>
+                    <div class="modern-card-body">
                         @php
                             $recentQAActivities = App\Models\Inspection::with(['client', 'qaReviewer'])
                                 ->whereNotNull('qa_reviewed_at')
@@ -332,19 +355,22 @@
                         @endphp
                         
                         @if($recentQAActivities->count() > 0)
-                            <div class="list-group list-group-flush">
+                            <div class="activity-list">
                                 @foreach($recentQAActivities as $activity)
-                                    <div class="list-group-item d-flex justify-content-between align-items-start">
-                                        <div class="ms-2 me-auto">
-                                            <div class="fw-bold">
-                                                <span class="badge bg-{{ $activity->qa_status === 'qa_approved' ? 'success' : ($activity->qa_status === 'qa_rejected' ? 'danger' : 'warning') }} me-2">
-                                                    {{ $activity->qa_status === 'qa_approved' ? 'APPROVED' : ($activity->qa_status === 'qa_rejected' ? 'REJECTED' : 'REVISION REQUIRED') }}
+                                    <div class="activity-item">
+                                        <div class="activity-status-indicator {{ $activity->qa_status == 'qa_approved' ? 'approved' : ($activity->qa_status == 'qa_rejected' ? 'rejected' : 'pending') }}"></div>
+                                        <div class="activity-content">
+                                            <div class="activity-title">{{ $activity->inspection_number }}</div>
+                                            <div class="activity-client">{{ $activity->client->client_name ?? 'N/A' }}</div>
+                                            <div class="activity-status">
+                                                <span class="status-badge {{ $activity->qa_status == 'qa_approved' ? 'approved' : ($activity->qa_status == 'qa_rejected' ? 'rejected' : 'pending') }}">
+                                                    {{ ucfirst(str_replace('_', ' ', $activity->qa_status)) }}
                                                 </span>
-                                                {{ $activity->inspection_number }}
                                             </div>
-                                            <small class="text-muted">
-                                                Client: {{ $activity->client->client_name ?? 'Unknown' }} | 
-                                                Reviewed by: {{ $activity->qaReviewer->name ?? 'Unknown' }} |
+                                        </div>
+                                        <div class="activity-meta">
+                                            <div class="activity-reviewer">{{ $activity->qaReviewer->name ?? 'N/A' }}</div>
+                                            <div class="activity-time">
                                                 @php
                                                     $reviewedAt = $activity->qa_reviewed_at;
                                                     if (is_string($reviewedAt)) {
@@ -356,18 +382,15 @@
                                                 @else
                                                     {{ $activity->qa_reviewed_at ?? 'Unknown time' }}
                                                 @endif
-                                            </small>
+                                            </div>
                                         </div>
-                                        <a href="{{ route('inspections.show', $activity->id) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <div class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <p>No recent QA activities found.</p>
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-list"></i>
+                                <p>No recent QA activities</p>
                             </div>
                         @endif
                     </div>
@@ -375,77 +398,44 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
+
+
+        <!-- Recent Users -->
         <div class="row g-4 mb-4">
             <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                <div class="modern-card">
+                    <div class="modern-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Recent Users
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{{ route('users.index') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-users me-2"></i>Manage Users
-                            </a>
-                            <a href="{{ route('users.create') }}" class="btn btn-outline-success">
-                                <i class="fas fa-user-plus me-2"></i>Add New User
-                            </a>
-                            <a href="{{ route('inspections.index') }}" class="btn btn-outline-info">
-                                <i class="fas fa-list me-2"></i>View All Inspections
-                            </a>
-                            <a href="{{ route('inspections.create') }}" class="btn btn-outline-warning">
-                                <i class="fas fa-plus me-2"></i>New Inspection
-                            </a>
-                            @if(Auth::user()->canApproveInspections())
-                                <a href="{{ route('qa.pending') }}" class="btn btn-outline-success">
-                                    <i class="fas fa-clipboard-check me-2"></i>QA Review Queue
-                                </a>
-                            @endif
-                            @if(Auth::user()->isSuperAdmin())
-                                <hr class="my-3">
-                                <small class="text-muted fw-bold">SUPER ADMIN RESOURCES</small>
-                                <a href="{{ route('admin.clients.index') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-building me-2"></i>Manage Clients
-                                </a>
-                                <a href="{{ route('admin.personnel.index') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-user-tie me-2"></i>Manage Personnel
-                                </a>
-                                <a href="{{ route('admin.equipment.index') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-tools me-2"></i>Manage Equipment
-                                </a>
-                                <a href="{{ route('admin.consumables.index') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-flask me-2"></i>Manage Consumables
-                                </a>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-clock me-2"></i>Recent Users
-                        </h5>
-                    </div>
-                    <div class="card-body">
+                    <div class="modern-card-body">
                         @if(isset($recentUsers) && $recentUsers->count() > 0)
-                            <div class="list-group list-group-flush">
+                            <div class="user-list">
                                 @foreach($recentUsers as $user)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <div>
-                                            <h6 class="mb-1">{{ $user->name }}</h6>
-                                            <small class="text-muted">{{ $user->email }}</small>
+                                    <div class="user-item">
+                                        <div class="user-avatar">
+                                            <span>{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                                         </div>
-                                        <span class="badge bg-{{ $user->role_color }}">{{ $user->role_name }}</span>
+                                        <div class="user-info">
+                                            <div class="user-name">{{ $user->name }}</div>
+                                            <div class="user-email">{{ $user->email }}</div>
+                                            <div class="user-role">
+                                                <span class="role-badge {{ $user->role_color }}">{{ $user->role_name }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="user-status">
+                                            <span class="status-indicator active"></span>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <p class="text-muted mb-0">No recent users found.</p>
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>No recent users found</p>
+                            </div>
                         @endif
                     </div>
                 </div>

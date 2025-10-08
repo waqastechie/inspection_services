@@ -7,10 +7,10 @@
                 <div class="col-md-6">
                     <h1 class="header-title">
                         <i class="fas fa-cogs me-2 fa-sm"></i>
-                        Professional Inspection Services
+                        Global Energy Ventures
                     </h1>
                     <p class="header-subtitle">
-                        Oil & Gas Industry Compliance | API, LOLER, BS Certified Standards
+                        Professional Inspection Services | Oil & Gas Industry Compliance | API, LOLER, BS Certified Standards
                     </p>
                 </div>
                 <div class="col-md-6 text-md-end">

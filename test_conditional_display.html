@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Conditional Display</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+        }
+        .test-section { 
+            border: 1px solid #ccc; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+        }
+        .form-check { 
+            margin: 10px 0; 
+        }
+        .conditional-question { 
+            margin-top: 15px; 
+            padding: 15px; 
+            background: #f0f8ff; 
+            border-left: 4px solid #007bff;
+            display: none;
+        }
+        .conditional-question.show { 
+            display: block; 
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Conditional Display Logic</h1>
+    
+    <div class="test-section" id="section-lifting-examination">
+        <h2>Question A Test</h2>
+        
+        <div class="inspection-question mb-4">
+            <label class="form-label fw-bold text-danger">
+                A. Is this the first through examination of lifting equipment after installation or after assembly at a new site or in a new location?
+            </label>
+            
+            <div class="d-flex gap-4 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="first_examination" id="firstExamYes" value="yes">
+                    <label class="form-check-label" for="firstExamYes">Yes</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="first_examination" id="firstExamNo" value="no">
+                    <label class="form-check-label" for="firstExamNo">No</label>
+                </div>
+            </div>
+
+            <!-- Conditional follow-up question -->
+            <div id="equipmentInstallationQuestion" class="conditional-question">
+                <div class="alert alert-light border-start border-primary border-4 ps-4">
+                    <label class="form-label fw-semibold">
+                        If yes, has the equipment been installed correctly?
+                    </label>
+                    <textarea class="form-control mt-2" name="equipment_installation_details" 
+                              rows="3" placeholder="Yes"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <h2>Question C Test</h2>
+        
+        <div class="inspection-question mb-4">
+            <label class="form-label fw-bold text-danger">
+                C. Does any part of the equipment have a defect which is or could become a danger to persons?
+            </label>
+            
+            <div class="d-flex gap-4 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="equipment_defect" id="defectYes" value="yes">
+                    <label class="form-check-label" for="defectYes">Yes</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="equipment_defect" id="defectNo" value="no">
+                    <label class="form-check-label" for="defectNo">No</label>
+                </div>
+            </div>
+
+            <!-- Conditional defect details -->
+            <div id="defectDetailsSection" class="conditional-question">
+                <div class="alert alert-light border-start border-warning border-4 ps-4">
+                    <label class="form-label fw-semibold mb-3">
+                        Identification of any part found to have a defect which is or could become a danger to persons and a description of the defect:
+                    </label>
+                    <textarea class="form-control mb-3" name="defect_description" 
+                              rows="4" placeholder="Identify and describe the defect in detail..."></textarea>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Defect Location</label>
+                            <input type="text" class="form-control" name="defect_location" 
+                                   placeholder="Specify exact location of defect">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Defect Type</label>
+                            <select class="form-control" name="defect_type">
+                                <option value="">Select defect type</option>
+                                <option value="structural">Structural</option>
+                                <option value="mechanical">Mechanical</option>
+                                <option value="electrical">Electrical</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button class="btn" onclick="testQuestionA()">Test Question A - Select Yes</button>
+        <button class="btn" onclick="testQuestionANo()">Test Question A - Select No</button>
+        <button class="btn" onclick="testQuestionC()">Test Question C - Select Yes</button>
+        <button class="btn" onclick="testQuestionCNo()">Test Question C - Select No</button>
+        <button class="btn" onclick="window.reinitializeLiftingExaminationDisplay()">Reinitialize Display</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+    // Copy the exact same logic from the blade template
+    (function() {
+        'use strict';
+        
+        console.log('🚀 Initializing lifting examination conditional display...');
+        
+        // Use event delegation to handle radio changes without conflicts
+        function setupConditionalDisplay() {
+            // Handle Question A (first_examination)
+            function handleFirstExamChange(event) {
+                if (event.target.name === 'first_examination') {
+                    const equipmentInstallationQuestion = document.getElementById('equipmentInstallationQuestion');
+                    if (equipmentInstallationQuestion) {
+                        if (event.target.value === 'yes' && event.target.checked) {
+                            console.log('✅ Showing first exam follow-up question');
+                            equipmentInstallationQuestion.style.display = 'block';
+                            equipmentInstallationQuestion.style.visibility = 'visible';
+                            equipmentInstallationQuestion.style.opacity = '1';
+                            updateTestResults('Question A: YES selected - Follow-up question shown');
+                        } else if (event.target.value === 'no' && event.target.checked) {
+                            console.log('❌ Hiding first exam follow-up question');
+                            equipmentInstallationQuestion.style.display = 'none';
+                            updateTestResults('Question A: NO selected - Follow-up question hidden');
+                        }
+                    }
+                }
+            }
+            
+            // Handle Question C (equipment_defect)
+            function handleDefectChange(event) {
+                if (event.target.name === 'equipment_defect') {
+                    const defectDetailsSection = document.getElementById('defectDetailsSection');
+                    if (defectDetailsSection) {
+                        if (event.target.value === 'yes' && event.target.checked) {
+                            console.log('✅ Showing defect details section');
+                            defectDetailsSection.style.display = 'block';
+                            defectDetailsSection.style.visibility = 'visible';
+                            defectDetailsSection.style.opacity = '1';
+                            defectDetailsSection.style.height = 'auto';
+                            updateTestResults('Question C: YES selected - Defect details shown');
+                        } else if (event.target.value === 'no' && event.target.checked) {
+                            console.log('❌ Hiding defect details section');
+                            defectDetailsSection.style.display = 'none';
+                            updateTestResults('Question C: NO selected - Defect details hidden');
+                        }
+                    }
+                }
+            }
+            
+            // Use event delegation on the form section instead of individual elements
+            const liftingSection = document.getElementById('section-lifting-examination');
+            if (liftingSection) {
+                // Remove any existing listeners first
+                liftingSection.removeEventListener('change', handleFirstExamChange);
+                liftingSection.removeEventListener('change', handleDefectChange);
+                
+                // Add listeners using event delegation
+                liftingSection.addEventListener('change', handleFirstExamChange, true);
+                liftingSection.addEventListener('change', handleDefectChange, true);
+                
+                console.log('✅ Event listeners attached to lifting examination section');
+                updateTestResults('Event listeners initialized successfully');
+                
+                // Initialize display state based on current values
+                initializeDisplayState();
+            } else {
+                console.error('❌ Lifting examination section not found');
+                updateTestResults('ERROR: Lifting examination section not found');
+            }
+        }
+        
+        function initializeDisplayState() {
+            // Initialize Question A display state
+            const checkedFirstExam = document.querySelector('input[name="first_examination"]:checked');
+            if (checkedFirstExam) {
+                const equipmentInstallationQuestion = document.getElementById('equipmentInstallationQuestion');
+                if (equipmentInstallationQuestion) {
+                    if (checkedFirstExam.value === 'yes') {
+                        equipmentInstallationQuestion.style.display = 'block';
+                        equipmentInstallationQuestion.style.visibility = 'visible';
+                        equipmentInstallationQuestion.style.opacity = '1';
+                        console.log('🔄 Initialized first exam follow-up as visible');
+                    } else {
+                        equipmentInstallationQuestion.style.display = 'none';
+                        console.log('🔄 Initialized first exam follow-up as hidden');
+                    }
+                }
+            }
+            
+            // Initialize Question C display state
+            const checkedDefect = document.querySelector('input[name="equipment_defect"]:checked');
+            if (checkedDefect) {
+                const defectDetailsSection = document.getElementById('defectDetailsSection');
+                if (defectDetailsSection) {
+                    if (checkedDefect.value === 'yes') {
+                        defectDetailsSection.style.display = 'block';
+                        defectDetailsSection.style.visibility = 'visible';
+                        defectDetailsSection.style.opacity = '1';
+                        defectDetailsSection.style.height = 'auto';
+                        console.log('🔄 Initialized defect details as visible');
+                    } else {
+                        defectDetailsSection.style.display = 'none';
+                        console.log('🔄 Initialized defect details as hidden');
+                    }
+                }
+            }
+        }
+        
+        function updateTestResults(message) {
+            const resultsDiv = document.getElementById('testResults');
+            const time = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<div><strong>${time}:</strong> ${message}</div>`;
+        }
+        
+        // Initialize immediately if DOM is ready, otherwise wait
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupConditionalDisplay);
+        } else {
+            setupConditionalDisplay();
+        }
+        
+        // Also setup after a delay to handle any timing issues with other scripts
+        setTimeout(setupConditionalDisplay, 1000);
+        setTimeout(setupConditionalDisplay, 2000);
+        
+        // Expose a global function for manual triggering if needed
+        window.reinitializeLiftingExaminationDisplay = setupConditionalDisplay;
+        
+        console.log('✅ Lifting examination conditional display initialized');
+    })();
+
+    // Test functions
+    function testQuestionA() {
+        const yesRadio = document.getElementById('firstExamYes');
+        yesRadio.checked = true;
+        yesRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function testQuestionANo() {
+        const noRadio = document.getElementById('firstExamNo');
+        noRadio.checked = true;
+        noRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function testQuestionC() {
+        const yesRadio = document.getElementById('defectYes');
+        yesRadio.checked = true;
+        yesRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function testQuestionCNo() {
+        const noRadio = document.getElementById('defectNo');
+        noRadio.checked = true;
+        noRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    </script>
+</body>
+</html>

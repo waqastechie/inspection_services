@@ -405,3 +405,37 @@
     /* Allow shadow change without position shift */
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
+
+/* ==========================================
+   Contrast fixes for light grey backgrounds
+   Ensures text is readable on .bg-light areas
+   ========================================== */
+.bg-light,
+.card.bg-light,
+.card-header.bg-light,
+.list-group-item.bg-light,
+.modal-header.bg-light,
+.alert.bg-light {
+    color: #212529 !important; /* Bootstrap default text color */
+}
+
+.card-header.bg-light h1,
+.card-header.bg-light h2,
+.card-header.bg-light h3,
+.card-header.bg-light h4,
+.card-header.bg-light h5,
+.card-header.bg-light h6,
+.bg-light .section-title,
+.bg-light .form-label,
+.bg-light .section-description {
+    color: #212529 !important;
+}
+
+/* Prevent accidental white text on light backgrounds */
+.bg-light .text-white,
+.card-header.bg-light .text-white,
+.bg-light .text-white-75,
+.bg-light .text-white-50,
+.bg-light .text-white-25 {
+    color: #212529 !important;
+}

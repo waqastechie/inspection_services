@@ -1,4 +1,4 @@
-@extends('layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Inspection Report #' . $inspection->inspection_number)
 
@@ -353,7 +353,10 @@
             @php
                 $hasLiftingExamination = $inspection->liftingExamination !== null;
                 $hasMpiInspection = $inspection->mpiInspection !== null;
-                $totalServiceData = $inspection->services->count() + ($hasLiftingExamination ? 1 : 0) + ($hasMpiInspection ? 1 : 0);
+                $hasLoadTest = $inspection->loadTest !== null;
+                $hasOtherTest = $inspection->otherTest !== null;
+                // Use the aggregated services count directly to avoid double-counting
+                $totalServiceData = $inspection->services->count();
             @endphp
             @if($inspection->services->count() > 0 || $hasLiftingExamination || $hasMpiInspection)
                 <div id="step3" class="row mb-5">
@@ -373,15 +376,28 @@
                                             <div class="card h-100 shadow-sm">
                                                 <div class="card-header bg-light">
                                                     <div class="d-flex justify-content-between align-items-center">
+                                                        @php
+                                                            // Map service_type to human-readable labels
+                                                            $serviceTypeLabels = [
+                                                                'load-test' => 'Load Test',
+                                                                'mpi-service' => 'MPI Inspection',
+                                                                'other-services' => 'Other Services',
+                                                                'lifting-examination' => 'Lifting Examination',
+                                                                'visual' => 'Visual Inspection',
+                                                                'thorough-examination' => 'Thorough Examination',
+                                                            ];
+                                                            $serviceLabel = $serviceTypeLabels[$service->service_type ?? ''] ?? ucwords(str_replace(['-', '_'], ' ', $service->service_type ?? 'Service'));
+                                                        @endphp
                                                         <h6 class="mb-0 text-primary fw-bold">
-                                                            <i class="fas fa-cog me-2"></i>{{ $service->service_type_name }}
+                                                            <i class="fas fa-cog me-2"></i>{{ $serviceLabel }}
                                                         </h6>
                                                        
                                                     </div>
                                                 </div>
                                                 <div class="card-body">
                                                     @php
-                                                        $serviceData = $service->service_data;
+                                                        // Safely read optional service_data property (may not exist on stdClass)
+                                                        $serviceData = property_exists($service, 'service_data') ? $service->service_data : [];
                                                         
                                                         // Handle JSON decoding - could be string or already array
                                                         if (is_string($serviceData)) {
@@ -402,6 +418,58 @@
                                                         }
                                                     @endphp
                                                     
+                                                    {{-- Fallback: build summary from dedicated service tables when no service_data exists --}}
+                                                    @php
+                                                        if (empty($serviceData)) {
+                                                            switch ($service->service_type) {
+                                                                case 'load-test':
+                                                                    if ($inspection->loadTest) {
+                                                                        $serviceData = [
+                                                                            'service_name' => 'Load Test',
+                                                                            'duration' => $inspection->loadTest->duration ?? null,
+                                                                            'result' => $inspection->loadTest->result ?? null,
+                                                                            'load' => $inspection->loadTest->load_test_load ?? null,
+                                                                            'notes' => $inspection->loadTest->notes ?? null,
+                                                                        ];
+                                                                    }
+                                                                    break;
+                                                                case 'mpi-service':
+                                                                    if ($inspection->mpiInspection) {
+                                                                        $serviceData = [
+                                                                            'service_name' => 'MPI Inspection',
+                                                                            'visual_method' => $inspection->mpiInspection->visual_method ?? null,
+                                                                            'visual_results' => $inspection->mpiInspection->visual_results ?? null,
+                                                                            'inspector' => $inspection->mpiInspection->visual_inspector ?? null,
+                                                                            'notes' => $inspection->mpiInspection->notes ?? null,
+                                                                        ];
+                                                                    }
+                                                                    break;
+                                                                case 'lifting-examination':
+                                                                    if ($inspection->liftingExamination) {
+                                                                        $serviceData = [
+                                                                            'service_name' => 'Lifting Examination',
+                                                                            'inspector' => $inspection->liftingExamination->inspector_name ?? $inspection->liftingExamination->thorough_examination_inspector ?? null,
+                                                                            'first_examination' => $inspection->liftingExamination->first_examination ?? null,
+                                                                            'safe_to_operate' => $inspection->liftingExamination->safe_to_operate ?? null,
+                                                                            'notes' => $inspection->liftingExamination->notes ?? null,
+                                                                        ];
+                                                                    }
+                                                                    break;
+                                                                case 'other-services':
+                                                                    if ($inspection->otherTest) {
+                                                                        $serviceData = [
+                                                                            'service_name' => 'Other Tests',
+                                                                            'drop_result' => $inspection->otherTest->drop_result ?? null,
+                                                                            'tilt_results' => $inspection->otherTest->tilt_results ?? null,
+                                                                            'lowering_result' => $inspection->otherTest->lowering_result ?? null,
+                                                                            'notes' => $inspection->otherTest->other_test_notes ?? $inspection->otherTest->thorough_examination_comments ?? null,
+                                                                        ];
+                                                                    }
+                                                                    break;
+                                                            }
+                                                        }
+                                                    @endphp
+
                                                     {{-- Service Name - handle multiple possible field names --}}
                                                     @php
                                                         $serviceName = $serviceData['service_name'] ?? $serviceData['name'] ?? null;
@@ -526,11 +594,20 @@
                                                         </div>
                                                     @endif
                                                     
-                                                    @if($service->notes)
+                                                    @php
+                                                        $serviceNotes = null;
+                                                        if (isset($serviceData['notes'])) {
+                                                            $serviceNotes = is_array($serviceData['notes'])
+                                                                ? implode(', ', array_filter($serviceData['notes']))
+                                                                : $serviceData['notes'];
+                                                        }
+                                                    @endphp
+
+                                                    @if(!empty($serviceNotes))
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Service Notes:</strong>
                                                             <div class="bg-light p-2 rounded">
-                                                                <p class="mb-0">{{ $service->notes }}</p>
+                                                                <p class="mb-0">{{ $serviceNotes }}</p>
                                                             </div>
                                                         </div>
                                                     @endif
@@ -549,7 +626,7 @@
                                                             <div class="d-flex align-items-center mt-1">
                                                                 <div class="bg-info bg-opacity-10 rounded-pill px-3 py-1">
                                                                     <i class="fas fa-user-check text-info me-2"></i>
-                                                                    <span class="fw-semibold">{{ $serviceInspector->personnel->name }}</span>
+                                                                    <span class="fw-semibold">{{ $serviceInspector->personnel->full_name }}</span>
                                                                     <small class="text-muted ms-2">({{ $serviceInspector->role }})</small>
                                                                 </div>
                                                             </div>
@@ -557,11 +634,16 @@
                                                     @endif
                                                     
                                                     {{-- Show service results if any --}}
-                                                    @if($service->results && $service->results->count() > 0)
+                                                    @php
+                                                        // Collect results associated with this service from the inspection's results relation
+                                                        $serviceResults = ($inspection->inspectionResults ?? collect())
+                                                            ->where('service_id', $service->id);
+                                                    @endphp
+                                                    @if($serviceResults->count() > 0)
                                                         <div class="mb-3">
                                                             <strong class="text-primary">Results:</strong>
                                                             <div class="mt-2">
-                                                                @foreach($service->results as $result)
+                                                                @foreach($serviceResults as $result)
                                                                     <div class="border-start border-3 border-success ps-3 mb-2">
                                                                         <div class="fw-semibold">{{ $result->result_type }}</div>
                                                                         @if($result->result_value)
@@ -577,15 +659,37 @@
                                                     @endif
                                                 </div>
                                                 <div class="card-footer bg-light">
+                                                    @php
+                                                        $createdAt = property_exists($service, 'created_at') ? $service->created_at : null;
+                                                        $updatedAt = property_exists($service, 'updated_at') ? $service->updated_at : null;
+                                                        $createdDisplay = null;
+                                                        $updatedDisplay = null;
+                                                        try {
+                                                            if ($createdAt) {
+                                                                $createdDisplay = is_string($createdAt)
+                                                                    ? \Carbon\Carbon::parse($createdAt)->format('M d, Y H:i')
+                                                                    : $createdAt->format('M d, Y H:i');
+                                                            }
+                                                            if ($updatedAt) {
+                                                                $updatedDisplay = is_string($updatedAt)
+                                                                    ? \Carbon\Carbon::parse($updatedAt)->format('M d, Y H:i')
+                                                                    : $updatedAt->format('M d, Y H:i');
+                                                            }
+                                                        } catch (\Exception $e) {
+                                                            // silently ignore parse/format errors
+                                                        }
+                                                    @endphp
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-clock me-1"></i>
-                                                            Created: {{ $service->created_at->format('M d, Y H:i') }}
-                                                        </small>
-                                                        @if($service->updated_at != $service->created_at)
+                                                        @if($createdDisplay)
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-clock me-1"></i>
+                                                                Created: {{ $createdDisplay }}
+                                                            </small>
+                                                        @endif
+                                                        @if($updatedDisplay && $updatedDisplay !== $createdDisplay)
                                                             <small class="text-muted">
                                                                 <i class="fas fa-edit me-1"></i>
-                                                                Updated: {{ $service->updated_at->format('M d, Y H:i') }}
+                                                                Updated: {{ $updatedDisplay }}
                                                             </small>
                                                         @endif
                                                     </div>
@@ -761,6 +865,303 @@
                                                 </div>
                                             </div>
                                         @endif
+
+                                        @if($hasLoadTest)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-info">
+                                                    <div class="card-header bg-info text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-weight-hanging me-2"></i>Load Test
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-info">Inspector:</strong>
+                                                                @php 
+                                                                    $loadTestInspector = $inspection->loadTest->load_test_inspector ? \App\Models\Personnel::find($inspection->loadTest->load_test_inspector) : null;
+                                                                @endphp
+                                                                <p class="mb-2">
+                                                                    @if($loadTestInspector)
+                                                                        {{ $loadTestInspector->first_name }} {{ $loadTestInspector->last_name }}
+                                                                    @else
+                                                                        N/A
+                                                                    @endif
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->loadTest->duration)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Duration:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->duration }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->two_points_diagonal)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Two Points Diagonal:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->two_points_diagonal }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->four_points)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Four Points:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->four_points }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->deflection)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Deflection:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->deflection }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->deformation)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Deformation:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->deformation }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->distance_from_ground)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Distance from Ground:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->distance_from_ground }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->result)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Result:</strong>
+                                                                    <span class="badge bg-{{ $inspection->loadTest->result === 'pass' ? 'success' : ($inspection->loadTest->result === 'fail' ? 'danger' : 'warning') }} ms-2">
+                                                                        {{ ucfirst($inspection->loadTest->result) }}
+                                                                    </span>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->notes)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Notes:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->loadTest->notes }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->loadTest->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($hasOtherTest)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-secondary">
+                                                    <div class="card-header bg-secondary text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-cogs me-2"></i>Other Tests
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            @if($inspection->otherTest->other_test_inspector)
+                                                                <div class="col-12">
+                                                                    <strong class="text-secondary">Inspector:</strong>
+                                                                    <p class="mb-2">{{ $inspection->otherTest->other_test_inspector }}</p>
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Drop Test Section -->
+                                                            @if($inspection->otherTest->drop_test_load || $inspection->otherTest->drop_type || $inspection->otherTest->drop_distance || $inspection->otherTest->drop_suspended || $inspection->otherTest->drop_impact_speed || $inspection->otherTest->drop_result || $inspection->otherTest->drop_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-arrow-down me-1"></i>Drop Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->drop_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->drop_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_type)
+                                                                        <div class="mb-1">
+                                                                            <strong>Type:</strong> {{ $inspection->otherTest->drop_type }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_distance)
+                                                                        <div class="mb-1">
+                                                                            <strong>Distance:</strong> {{ $inspection->otherTest->drop_distance }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_suspended)
+                                                                        <div class="mb-1">
+                                                                            <strong>Suspended:</strong> {{ $inspection->otherTest->drop_suspended }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_impact_speed)
+                                                                        <div class="mb-1">
+                                                                            <strong>Impact Speed:</strong> {{ $inspection->otherTest->drop_impact_speed }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_result)
+                                                                        <div class="mb-1">
+                                                                            <strong>Result:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->drop_result === 'pass' ? 'success' : ($inspection->otherTest->drop_result === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->drop_result) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->drop_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Tilt Test Section -->
+                                                            @if($inspection->otherTest->tilt_test_load || $inspection->otherTest->loaded_tilt || $inspection->otherTest->empty_tilt || $inspection->otherTest->tilt_stability || $inspection->otherTest->tilt_direction || $inspection->otherTest->tilt_duration || $inspection->otherTest->tilt_results || $inspection->otherTest->tilt_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-balance-scale me-1"></i>Tilt Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->tilt_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->tilt_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->loaded_tilt)
+                                                                        <div class="mb-1">
+                                                                            <strong>Loaded Tilt:</strong> {{ $inspection->otherTest->loaded_tilt }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->empty_tilt)
+                                                                        <div class="mb-1">
+                                                                            <strong>Empty Tilt:</strong> {{ $inspection->otherTest->empty_tilt }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_stability)
+                                                                        <div class="mb-1">
+                                                                            <strong>Stability:</strong> {{ $inspection->otherTest->tilt_stability }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_direction)
+                                                                        <div class="mb-1">
+                                                                            <strong>Direction:</strong> {{ $inspection->otherTest->tilt_direction }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_duration)
+                                                                        <div class="mb-1">
+                                                                            <strong>Duration:</strong> {{ $inspection->otherTest->tilt_duration }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_results)
+                                                                        <div class="mb-1">
+                                                                            <strong>Results:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->tilt_results === 'pass' ? 'success' : ($inspection->otherTest->tilt_results === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->tilt_results) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->tilt_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Lowering Test Section -->
+                                                            @if($inspection->otherTest->lowering_test_load || $inspection->otherTest->lowering_method || $inspection->otherTest->lowering_impact_speed || $inspection->otherTest->lowering_distance || $inspection->otherTest->lowering_duration || $inspection->otherTest->lowering_cycles || $inspection->otherTest->brake_efficiency || $inspection->otherTest->control_response || $inspection->otherTest->lowering_result || $inspection->otherTest->lowering_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-arrow-down me-1"></i>Lowering Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->lowering_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->lowering_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_method)
+                                                                        <div class="mb-1">
+                                                                            <strong>Method:</strong> {{ $inspection->otherTest->lowering_method }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_impact_speed)
+                                                                        <div class="mb-1">
+                                                                            <strong>Impact Speed:</strong> {{ $inspection->otherTest->lowering_impact_speed }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_distance)
+                                                                        <div class="mb-1">
+                                                                            <strong>Distance:</strong> {{ $inspection->otherTest->lowering_distance }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_duration)
+                                                                        <div class="mb-1">
+                                                                            <strong>Duration:</strong> {{ $inspection->otherTest->lowering_duration }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_cycles)
+                                                                        <div class="mb-1">
+                                                                            <strong>Cycles:</strong> {{ $inspection->otherTest->lowering_cycles }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->brake_efficiency)
+                                                                        <div class="mb-1">
+                                                                            <strong>Brake Efficiency:</strong> {{ $inspection->otherTest->brake_efficiency }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->control_response)
+                                                                        <div class="mb-1">
+                                                                            <strong>Control Response:</strong> {{ $inspection->otherTest->control_response }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_result)
+                                                                        <div class="mb-1">
+                                                                            <strong>Result:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->lowering_result === 'pass' ? 'success' : ($inspection->otherTest->lowering_result === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->lowering_result) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->lowering_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Thorough Examination Comments -->
+                                                            @if($inspection->otherTest->thorough_examination_comments)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-clipboard-check me-1"></i>Thorough Examination
+                                                                    </h6>
+                                                                    <div class="bg-light p-2 rounded">
+                                                                        <small>{{ $inspection->otherTest->thorough_examination_comments }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->otherTest->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
                             </div>
@@ -772,7 +1173,9 @@
                 @php
                     $hasLiftingExamination = $inspection->liftingExamination !== null;
                     $hasMpiInspection = $inspection->mpiInspection !== null;
-                    $totalServiceData = ($hasLiftingExamination ? 1 : 0) + ($hasMpiInspection ? 1 : 0);
+                    $hasLoadTest = $inspection->loadTest !== null;
+                    $hasOtherTest = $inspection->otherTest !== null;
+                    $totalServiceData = ($hasLiftingExamination ? 1 : 0) + ($hasMpiInspection ? 1 : 0) + ($hasLoadTest ? 1 : 0) + ($hasOtherTest ? 1 : 0);
                 @endphp
 
                 @if($totalServiceData > 0)
@@ -942,6 +1345,268 @@
                                                         <small class="text-muted">
                                                             <i class="fas fa-clock me-1"></i>
                                                             Last updated: {{ $inspection->mpiInspection->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($inspection->loadTest)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-info">
+                                                    <div class="card-header bg-info text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-weight-hanging me-2"></i>Load Test
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            <div class="col-12">
+                                                                <strong class="text-info">Inspector:</strong>
+                                                                @php 
+                                                                    $loadTestInspector = $inspection->loadTest->load_test_inspector ? \App\Models\Personnel::find($inspection->loadTest->load_test_inspector) : null;
+                                                                @endphp
+                                                                <p class="mb-2">
+                                                                    @if($loadTestInspector)
+                                                                        {{ $loadTestInspector->first_name }} {{ $loadTestInspector->last_name }}
+                                                                    @else
+                                                                        N/A
+                                                                    @endif
+                                                                </p>
+                                                            </div>
+                                                            @if($inspection->loadTest->duration)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Duration:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->duration }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->two_points_diagonal)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Two Points Diagonal:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->two_points_diagonal }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->four_points)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Four Points:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->four_points }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->deflection)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Deflection:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->deflection }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->deformation)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Deformation:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->deformation }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->distance_from_ground)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Distance from Ground:</strong>
+                                                                    <p class="mb-2">{{ $inspection->loadTest->distance_from_ground }}</p>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->result)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Result:</strong>
+                                                                    <span class="badge bg-{{ $inspection->loadTest->result === 'pass' ? 'success' : ($inspection->loadTest->result === 'fail' ? 'danger' : 'warning') }} ms-2">
+                                                                        {{ ucfirst($inspection->loadTest->result) }}
+                                                                    </span>
+                                                                </div>
+                                                            @endif
+                                                            @if($inspection->loadTest->notes)
+                                                                <div class="col-12">
+                                                                    <strong class="text-info">Notes:</strong>
+                                                                    <div class="bg-light p-2 rounded mt-1">
+                                                                        <small>{{ $inspection->loadTest->notes }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->loadTest->updated_at->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($inspection->otherTest)
+                                            <div class="col-lg-6 mb-4">
+                                                <div class="card h-100 shadow-sm border-secondary">
+                                                    <div class="card-header bg-secondary text-white">
+                                                        <h6 class="mb-0 fw-bold">
+                                                            <i class="fas fa-cogs me-2"></i>Other Tests
+                                                        </h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row g-2">
+                                                            @if($inspection->otherTest->other_test_inspector)
+                                                                <div class="col-12">
+                                                                    <strong class="text-secondary">Inspector:</strong>
+                                                                    <p class="mb-2">{{ $inspection->otherTest->other_test_inspector }}</p>
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Drop Test Section -->
+                                                            @if($inspection->otherTest->drop_test_load || $inspection->otherTest->drop_type || $inspection->otherTest->drop_distance || $inspection->otherTest->drop_impact_speed || $inspection->otherTest->drop_result || $inspection->otherTest->drop_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-arrow-down me-1"></i>Drop Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->drop_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->drop_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_type)
+                                                                        <div class="mb-1">
+                                                                            <strong>Type:</strong> {{ $inspection->otherTest->drop_type }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_distance)
+                                                                        <div class="mb-1">
+                                                                            <strong>Distance:</strong> {{ $inspection->otherTest->drop_distance }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_impact_speed)
+                                                                        <div class="mb-1">
+                                                                            <strong>Impact Speed:</strong> {{ $inspection->otherTest->drop_impact_speed }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_result)
+                                                                        <div class="mb-1">
+                                                                            <strong>Result:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->drop_result === 'pass' ? 'success' : ($inspection->otherTest->drop_result === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->drop_result) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->drop_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->drop_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Tilt Test Section -->
+                                                            @if($inspection->otherTest->tilt_test_load || $inspection->otherTest->loaded_tilt || $inspection->otherTest->empty_tilt || $inspection->otherTest->tilt_stability || $inspection->otherTest->tilt_results || $inspection->otherTest->tilt_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-balance-scale me-1"></i>Tilt Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->tilt_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->tilt_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->loaded_tilt)
+                                                                        <div class="mb-1">
+                                                                            <strong>Loaded Tilt:</strong> {{ $inspection->otherTest->loaded_tilt }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->empty_tilt)
+                                                                        <div class="mb-1">
+                                                                            <strong>Empty Tilt:</strong> {{ $inspection->otherTest->empty_tilt }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_stability)
+                                                                        <div class="mb-1">
+                                                                            <strong>Stability:</strong> {{ $inspection->otherTest->tilt_stability }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_results)
+                                                                        <div class="mb-1">
+                                                                            <strong>Results:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->tilt_results === 'pass' ? 'success' : ($inspection->otherTest->tilt_results === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->tilt_results) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->tilt_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->tilt_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Lowering Test Section -->
+                                                            @if($inspection->otherTest->lowering_test_load || $inspection->otherTest->lowering_method || $inspection->otherTest->brake_efficiency || $inspection->otherTest->control_response || $inspection->otherTest->lowering_result || $inspection->otherTest->lowering_notes)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-arrow-down me-1"></i>Lowering Test
+                                                                    </h6>
+                                                                    @if($inspection->otherTest->lowering_test_load)
+                                                                        <div class="mb-1">
+                                                                            <strong>Load:</strong> {{ $inspection->otherTest->lowering_test_load }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_method)
+                                                                        <div class="mb-1">
+                                                                            <strong>Method:</strong> {{ $inspection->otherTest->lowering_method }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->brake_efficiency)
+                                                                        <div class="mb-1">
+                                                                            <strong>Brake Efficiency:</strong> {{ $inspection->otherTest->brake_efficiency }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->control_response)
+                                                                        <div class="mb-1">
+                                                                            <strong>Control Response:</strong> {{ $inspection->otherTest->control_response }}
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_result)
+                                                                        <div class="mb-1">
+                                                                            <strong>Result:</strong>
+                                                                            <span class="badge bg-{{ $inspection->otherTest->lowering_result === 'pass' ? 'success' : ($inspection->otherTest->lowering_result === 'fail' ? 'danger' : 'warning') }}">
+                                                                                {{ ucfirst($inspection->otherTest->lowering_result) }}
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                    @if($inspection->otherTest->lowering_notes)
+                                                                        <div class="mb-2">
+                                                                            <strong>Notes:</strong>
+                                                                            <div class="bg-light p-2 rounded mt-1">
+                                                                                <small>{{ $inspection->otherTest->lowering_notes }}</small>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+
+                                                            <!-- Thorough Examination Comments -->
+                                                            @if($inspection->otherTest->thorough_examination_comments)
+                                                                <div class="col-12">
+                                                                    <h6 class="text-secondary mb-2">
+                                                                        <i class="fas fa-clipboard-check me-1"></i>Thorough Examination
+                                                                    </h6>
+                                                                    <div class="bg-light p-2 rounded">
+                                                                        <small>{{ $inspection->otherTest->thorough_examination_comments }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer bg-light">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            Last updated: {{ $inspection->otherTest->updated_at->format('M d, Y H:i') }}
                                                         </small>
                                                     </div>
                                                 </div>
@@ -1238,20 +1903,71 @@
                                             {{-- New format with InspectionImage model --}}
                                             <div class="col-md-6 col-lg-4">
                                                 <div class="card inspection-image-card h-100">
-                                                    <div class="position-relative">
-                                                        <img src="{{ $image->url }}" 
-                                                             alt="{{ $image->original_name }}" 
-                                                             class="card-img-top inspection-image-preview"
-                                                             style="height: 200px; object-fit: cover; cursor: pointer;"
-                                                             onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')">
-                                                        <div class="position-absolute top-0 end-0 m-2">
-                                                            <button type="button" class="btn btn-light btn-sm rounded-circle" 
-                                                                    onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')"
-                                                                    title="View Full Size">
-                                                                <i class="fas fa-expand"></i>
-                                                            </button>
+                                                    @if($image->is_image)
+                                                        {{-- Display image --}}
+                                                        <div class="position-relative">
+                                                            <img src="{{ $image->url }}" 
+                                                                 alt="{{ $image->original_name }}" 
+                                                                 class="card-img-top inspection-image-preview"
+                                                                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                                                                 onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')">
+                                                            <div class="position-absolute top-0 end-0 m-2">
+                                                                <button type="button" class="btn btn-light btn-sm rounded-circle" 
+                                                                        onclick="showImageModal('{{ $image->url }}', '{{ $image->original_name }}', '{{ $image->caption }}')"
+                                                                        title="View Full Size">
+                                                                    <i class="fas fa-expand"></i>
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    @else
+                                                        {{-- Display document with icon --}}
+                                                        @php
+                                                            $extension = strtolower($image->extension);
+                                                            $iconClass = 'fa-file-alt';
+                                                            $iconColor = 'text-muted';
+                                                            $bgColor = 'bg-light';
+                                                            
+                                                            switch($extension) {
+                                                                case 'pdf':
+                                                                    $iconClass = 'fa-file-pdf';
+                                                                    $iconColor = 'text-danger';
+                                                                    $bgColor = 'bg-danger-subtle';
+                                                                    break;
+                                                                case 'doc':
+                                                                case 'docx':
+                                                                    $iconClass = 'fa-file-word';
+                                                                    $iconColor = 'text-primary';
+                                                                    $bgColor = 'bg-primary-subtle';
+                                                                    break;
+                                                                case 'xls':
+                                                                case 'xlsx':
+                                                                    $iconClass = 'fa-file-excel';
+                                                                    $iconColor = 'text-success';
+                                                                    $bgColor = 'bg-success-subtle';
+                                                                    break;
+                                                                case 'ppt':
+                                                                case 'pptx':
+                                                                    $iconClass = 'fa-file-powerpoint';
+                                                                    $iconColor = 'text-warning';
+                                                                    $bgColor = 'bg-warning-subtle';
+                                                                    break;
+                                                                case 'txt':
+                                                                    $iconClass = 'fa-file-alt';
+                                                                    $iconColor = 'text-info';
+                                                                    $bgColor = 'bg-info-subtle';
+                                                                    break;
+                                                            }
+                                                        @endphp
+                                                        <div class="card-img-top d-flex align-items-center justify-content-center {{ $bgColor }}" 
+                                                             style="height: 200px;">
+                                                            <div class="text-center">
+                                                                <i class="fas {{ $iconClass }} fa-4x {{ $iconColor }} mb-2"></i>
+                                                                <br>
+                                                                <span class="badge bg-secondary text-uppercase">{{ $extension }}</span>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                    
                                                     <div class="card-body">
                                                         <h6 class="card-title text-truncate" title="{{ $image->original_name }}">
                                                             {{ $image->original_name }}
@@ -1259,10 +1975,20 @@
                                                         @if($image->caption)
                                                             <p class="card-text small text-muted">{{ $image->caption }}</p>
                                                         @endif
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <small class="text-muted">{{ $image->formatted_size }}</small>
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-muted">{{ $image->formatted_file_size }}</small>
                                                             <small class="text-muted">{{ $image->created_at ? $image->created_at->format('d/m/Y H:i') : 'Unknown date' }}</small>
                                                         </div>
+                                                        @if(!$image->is_image)
+                                                            <div class="text-center">
+                                                                <a href="{{ $image->download_url }}" 
+                                                                   class="btn btn-outline-primary btn-sm" 
+                                                                   target="_blank"
+                                                                   title="Download {{ $image->original_name }}">
+                                                                    <i class="fas fa-download me-1"></i>Download
+                                                                </a>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>

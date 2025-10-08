@@ -1,4 +1,4 @@
-@extends('layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Edit Inspection Report - Professional Inspection Services')
 
@@ -11,46 +11,6 @@
     <div class="row justify-content-center">
         <div class="col-12">
             <div class="form-container">
-                
-                <!-- Simple Header matching Create Page -->
-                <div class="header-section mb-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="text-primary mb-2">
-                                <i class="fas fa-edit me-2"></i>Edit Inspection Report
-                            </h1>
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <span class="badge bg-primary px-3 py-2">
-                                    <i class="fas fa-hashtag me-1"></i>{{ $inspection->inspection_number }}
-                                </span>
-                                @if($inspection->status)
-                                    @php
-                                        $statusConfig = [
-                                            'draft' => ['color' => 'warning', 'icon' => 'fa-edit', 'text' => 'Draft'],
-                                            'in_progress' => ['color' => 'info', 'icon' => 'fa-spinner', 'text' => 'In Progress'],
-                                            'completed' => ['color' => 'success', 'icon' => 'fa-check', 'text' => 'Completed'],
-                                            'cancelled' => ['color' => 'danger', 'icon' => 'fa-times', 'text' => 'Cancelled']
-                                        ];
-                                        $config = $statusConfig[$inspection->status] ?? ['color' => 'secondary', 'icon' => 'fa-question', 'text' => ucfirst($inspection->status)];
-                                    @endphp
-                                    <span class="badge bg-{{ $config['color'] }} px-3 py-2">
-                                        <i class="fas {{ $config['icon'] }} me-1"></i>{{ $config['text'] }}
-                                    </span>
-                                @endif
-                                @if($inspection->client?->client_name)
-                                    <span class="badge bg-secondary px-3 py-2">
-                                        <i class="fas fa-building me-1"></i>{{ $inspection->client->client_name }}
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <a href="{{ route('inspections.show', $inspection->id) }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to View
-                            </a>
-                        </div>
-                    </div>
-                </div>
                 
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
@@ -68,111 +28,57 @@
                     </div>
                 @endif
 
-                <form id="liftingInspectionForm" method="POST" action="{{ route('inspections.update', $inspection->id) }}" enctype="multipart/form-data" 
-                      x-data="inspectionWizard()" @submit="validateAndSubmit($event)"
-                      class="needs-validation">
+                @auth
+                    <div class="alert alert-info alert-dismissible fade show m-3" role="alert">
+                        <i class="fas fa-user me-2"></i>
+                        Logged in as: {{ auth()->user()->name }} ({{ auth()->user()->email }})
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @else
+                    <div class="alert alert-warning alert-dismissible fade show m-3" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Warning: You are not logged in. Please <a href="{{ route('login') }}">login</a> to submit inspections.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endauth
+
+                <form id="liftingInspectionForm" method="POST" action="{{ route('inspections.update', $inspection->id) }}" enctype="multipart/form-data" novalidate>
                     @csrf
                     @method('PUT')
                     
-                    <!-- Wizard Step Navigation -->
-                    <div class="wizard-navigation mb-4">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="step-indicators d-flex justify-content-between">
-                                    <template x-for="(step, index) in steps" :key="index">
-                                        <div class="step-indicator" 
-                                             :class="{'active': currentStep === index, 'completed': isStepCompleted(index)}"
-                                             @click="goToStep(index)">
-                                            <div class="step-number" x-text="index + 1"></div>
-                                            <div class="step-title" x-text="step.title"></div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </div>
+                    @include('inspections.sections.client-information', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.job-details', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.add-service', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.lifting-examination', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.load-test', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.mpi-service', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.thorough-examination', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.visual', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.equipment-details', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.asset-details', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.items-table', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.consumables', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.comments', ['inspection' => $inspection])
+                    
+                    @include('inspections.sections.image-upload', ['inspection' => $inspection])
+
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-save me-2"></i>Update Inspection
+                        </button>
                     </div>
-
-                    <!-- Wizard Steps -->
-                    <div class="wizard-content">
-                        <!-- Step 1: Client Information -->
-                        <div class="wizard-step" x-show="currentStep === 0" x-transition>
-                            @include('inspections.sections.client-information', ['inspection' => $inspection])
-                        </div>
-
-                        <!-- Step 2: Services & Examination -->
-                        <div class="wizard-step" x-show="currentStep === 1" x-transition>
-                            @include('inspections.sections.add-service', ['inspection' => $inspection])
-                            @include('inspections.sections.testing-methods', ['inspection' => $inspection])
-                            @include('inspections.sections.lifting-examination', ['inspection' => $inspection])
-                            @include('inspections.sections.load-test', ['inspection' => $inspection])
-                            @include('inspections.sections.mpi-service', ['inspection' => $inspection])
-                            @include('inspections.sections.thorough-examination', ['inspection' => $inspection])
-                            @include('inspections.sections.visual', ['inspection' => $inspection])
-                        </div>
-
-                        <!-- Step 3: Equipment Details -->
-                        <div class="wizard-step" x-show="currentStep === 2" x-transition>
-                            @include('inspections.sections.equipment', ['inspection' => $inspection])
-                        </div>
-
-                        <!-- Step 4: Personnel & Assets (Merged with Comments & Images) -->
-                        <div class="wizard-step" x-show="currentStep === 3" x-transition>
-                            @include('inspections.sections.asset-details', ['inspection' => $inspection])
-                            @include('inspections.sections.items-table', ['inspection' => $inspection])
-                            @include('inspections.sections.consumables', ['inspection' => $inspection])
-                            @include('inspections.sections.personnel-assignment', ['inspection' => $inspection])
-                            @include('inspections.sections.comments', ['inspection' => $inspection])
-                            @include('inspections.sections.image-upload', ['inspection' => $inspection])
-                            @include('inspections.sections.edit-status', ['inspection' => $inspection])
-                            @include('inspections.sections.export-section', ['isEdit' => true])
-                        </div>
-                    </div>
-
-                    <!-- Wizard Navigation Buttons -->
-                    <div class="wizard-navigation-buttons mt-5">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <button type="button" class="btn btn-outline-secondary" 
-                                            x-show="currentStep > 0" 
-                                            @click="previousStep()"
-                                            :disabled="isNavigating">
-                                        <i class="fas fa-arrow-left me-2"></i>Previous
-                                    </button>
-                                    
-                                    <div class="d-flex align-items-center">
-                                        <span class="text-muted me-3" x-text="`Step ${currentStep + 1} of ${steps.length}`"></span>
-                                        <div class="progress me-3" style="width: 200px; height: 8px;">
-                                            <div class="progress-bar bg-primary" 
-                                                 :style="`width: ${((currentStep + 1) / steps.length) * 100}%`"></div>
-                                        </div>
-                                        <span class="text-muted small" x-text="`${Math.round(((currentStep + 1) / steps.length) * 100)}% Complete`"></span>
-                                    </div>
-                                    
-                                    <div>
-                                        <button type="button" class="btn btn-primary" 
-                                                x-show="currentStep < steps.length - 1" 
-                                                @click="nextStep()"
-                                                :disabled="isNavigating">
-                                            Next<i class="fas fa-arrow-right ms-2"></i>
-                                        </button>
-                                        
-                                        <button type="submit" class="btn btn-success" 
-                                                x-show="currentStep === steps.length - 1"
-                                                :disabled="isSubmitting">
-                                            <span x-show="!isSubmitting">
-                                                <i class="fas fa-save me-2"></i>Update Inspection
-                                            </span>
-                                            <span x-show="isSubmitting">
-                                                <i class="fas fa-spinner fa-spin me-2"></i>Updating...
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </form>
             </div>
         </div>
@@ -191,348 +97,11 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/inspection-form.css') }}">
-<style>
-/* Wizard Navigation Styles */
-.wizard-navigation {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 1px solid #e2e8f0;
-}
-
-.step-indicators {
-    gap: 1rem;
-}
-
-.step-indicator {
-    flex: 1;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    padding: 1rem;
-    border-radius: 8px;
-    position: relative;
-}
-
-.step-indicator:hover {
-    background: #f8fafc;
-}
-
-.step-indicator.active {
-    background: #eff6ff;
-    border: 2px solid #3b82f6;
-}
-
-.step-indicator.completed {
-    background: #f0fdf4;
-    border: 2px solid #10b981;
-}
-
-.step-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #e2e8f0;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 0.5rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.step-indicator.active .step-number {
-    background: #3b82f6;
-    color: white;
-}
-
-.step-indicator.completed .step-number {
-    background: #10b981;
-    color: white;
-}
-
-.step-indicator.completed .step-number::before {
-    content: '✓';
-    font-weight: bold;
-}
-
-.step-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #64748b;
-    transition: all 0.3s ease;
-}
-
-.step-indicator.active .step-title {
-    color: #3b82f6;
-    font-weight: 600;
-}
-
-.step-indicator.completed .step-title {
-    color: #10b981;
-    font-weight: 600;
-}
-
-/* Wizard Content Styles */
-.wizard-content {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-}
-
-.wizard-step {
-    padding: 0;
-}
-
-/* Wizard Navigation Buttons */
-.wizard-navigation-buttons {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 1px solid #e2e8f0;
-}
-
-.wizard-navigation-buttons .btn {
-    min-width: 120px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 500;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.wizard-navigation-buttons .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Progress Bar in Navigation */
-.wizard-navigation-buttons .progress {
-    border-radius: 4px;
-    background: #f1f5f9;
-}
-
-.wizard-navigation-buttons .progress-bar {
-    background: linear-gradient(45deg, #3b82f6, #1d4ed8);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-/* Alpine.js Validation Styles */
-.is-invalid-alpine {
-    border-color: #dc3545 !important;
-    padding-right: calc(1.5em + 0.75rem) !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 1.4 1.4M6.2 7.4 4.8 6'/%3e%3c/svg%3e") !important;
-    background-repeat: no-repeat !important;
-    background-position: right calc(0.375em + 0.1875rem) center !important;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
-}
-
-.invalid-feedback-alpine {
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: 0.875em;
-    color: #dc3545;
-    display: block;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .step-indicators {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .step-indicator {
-        padding: 0.75rem;
-    }
-    
-    .step-number {
-        width: 32px;
-        height: 32px;
-        font-size: 0.875rem;
-    }
-    
-    .step-title {
-        font-size: 0.75rem;
-    }
-    
-    .wizard-navigation-buttons .d-flex {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: stretch !important;
-    }
-    
-    .wizard-navigation-buttons .btn {
-        min-width: auto;
-        width: 100%;
-    }
-}
-
-/* Animation for step transitions */
-[x-transition] {
-    transition: all 0.3s ease;
-}
-
-[x-transition].x-transition-enter {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-[x-transition].x-transition-enter-active {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-[x-transition].x-transition-leave {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-[x-transition].x-transition-leave-active {
-    opacity: 0;
-    transform: translateX(-20px);
-}
-
-/* Hide completed step numbers, show checkmark */
-.step-indicator.completed .step-number span {
-    display: none;
-}
-
-/* Enhanced Focus States */
-.step-indicator:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-}
-
-.btn:focus {
-    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
-}
-
-/* Loading state for buttons */
-.btn .fa-spinner {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
+<link rel="stylesheet" href="{{ asset('css/auto-save.css') }}">
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/inspection-form-simple.js') }}"></script>
-<script>
-    // Set edit mode and current inspector data before DOM loads
-    window.isEditMode = true;
-    window.currentInspector = @json($inspection->lead_inspector_name ?? '');
-    window.currentInspectorCertification = @json($inspection->lead_inspector_certification ?? '');
-    window.currentClient = @json($inspection->client?->client_name ?? '');
-    
-    // Populate existing data when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        @if($inspection->services->isNotEmpty())
-            // Populate services
-                    const services = {!! json_encode($inspection->services->map(function($service) {
-                return [
-                    'type' => $service->service_type,
-                    'name' => $service->service_name ?? $service->service_type_name,
-                    'description' => $service->service_description,
-                    'parameters' => $service->test_parameters,
-                    'criteria' => $service->acceptance_criteria,
-                    'codes' => $service->applicable_codes,
-                    'duration' => $service->estimated_duration,
-                    'cost' => $service->cost_estimate,
-                ];
-            })) !!};
-            
-            if (window.populateServices) {
-                window.populateServices(services);
-            }
-        @endif
-        
-        @if($inspection->personnelAssignments->isNotEmpty())
-            // Populate personnel
-            const personnel = {!! json_encode($inspection->personnelAssignments->map(function($person) {
-                return [
-                    'name' => $person->personnel_name,
-                    'role' => $person->role_position,
-                    'certification' => $person->certification_level,
-                    'cert_number' => $person->certification_number,
-                    'cert_expiry' => $person->certification_expiry?->format('Y-m-d'),
-                    'services' => $person->assigned_services,
-                    'contact' => $person->contact_information,
-                    'start_time' => $person->availability_start,
-                    'end_time' => $person->availability_end,
-                    'rate' => $person->hourly_rate,
-                ];
-            })) !!};
-            
-            if (window.populatePersonnel) {
-                window.populatePersonnel(personnel);
-            }
-        @endif
-        
-        @if($inspection->consumableAssignments->isNotEmpty())
-            // Populate consumables
-            const consumables = {!! json_encode($inspection->consumableAssignments->map(function($item) {
-                return [
-                    'name' => $item->consumable_name,
-                    'type' => $item->consumable_type,
-                    'brand' => $item->brand_manufacturer,
-                    'code' => $item->product_code,
-                    'batch' => $item->batch_lot_number,
-                    'expiry' => $item->expiry_date?->format('Y-m-d'),
-                    'quantity' => $item->quantity_used,
-                    'unit' => $item->unit,
-                    'cost' => $item->unit_cost,
-                    'supplier' => $item->supplier,
-                    'services' => $item->assigned_services,
-                    'condition' => $item->condition,
-                    'notes' => $item->notes,
-                ];
-            })) !!};
-            
-            if (window.populateConsumables) {
-                window.populateConsumables(consumables);
-            }
-        @endif
-        
-        @php
-            // Get images using the new relationship
-            $existingImages = $inspection->images_for_edit ?? collect();
-            $hasImages = count($existingImages) > 0;
-        @endphp
-        
-        @if($hasImages)
-            <script>
-            // Populate images using available format
-            const images = {!! json_encode($existingImages) !!};
-            console.log('Images data from PHP:', images);
-            
-            // Function to wait for populateImages to be available
-            function waitForPopulateImages() {
-                if (window.populateImages) {
-                    console.log('populateImages function found, calling it...');
-                    window.populateImages(images);
-                } else {
-                    console.log('populateImages function not yet available, waiting...');
-                    setTimeout(waitForPopulateImages, 100);
-                }
-            }
-            
-            // Start waiting for the function
-            waitForPopulateImages();
-            </script>
-        @endif
-    });
-</script>
+<script src="{{ asset('js/auto-save.js') }}"></script>
 @endpush
 
 <!-- Alpine.js Wizard Component -->

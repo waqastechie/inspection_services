@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreClientRequest;
+use App\Http\Requests\UpdateClientRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -47,65 +48,33 @@ class ClientController extends Controller
     /**
      * Store a newly created client
      */
-    public function store(Request $request)
+    public function store(StoreClientRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'client_name' => 'required|string|max:255|unique:clients,client_name',
-            'client_code' => 'nullable|string|max:10|unique:clients,client_code',
-            'company_type' => 'nullable|string|max:100',
-            'industry' => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'country' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'website' => 'nullable|url|max:255',
-            'contact_person' => 'nullable|string|max:255',
-            'contact_position' => 'nullable|string|max:100',
-            'contact_phone' => 'nullable|string|max:20',
-            'contact_email' => 'nullable|email|max:255',
-            'billing_address' => 'nullable|string|max:500',
-            'billing_city' => 'nullable|string|max:100',
-            'billing_state' => 'nullable|string|max:100',
-            'billing_country' => 'nullable|string|max:100',
-            'billing_postal_code' => 'nullable|string|max:20',
-            'tax_id' => 'nullable|string|max:50',
-            'registration_number' => 'nullable|string|max:50',
-            'payment_terms' => 'nullable|string|max:50',
-            'credit_limit' => 'nullable|numeric|min:0',
-            'preferred_currency' => 'nullable|string|size:3',
-            'notes' => 'nullable|string|max:1000',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+        if (!array_key_exists('is_active', $validated) || $validated['is_active'] === null) {
+            unset($validated['is_active']);
         }
 
         try {
             DB::beginTransaction();
-            
-            $client = new Client($request->all());
-            
-            // Generate client code if not provided
-            if (!$request->client_code) {
+
+            $client = new Client($validated);
+
+            if (empty($client->client_code)) {
                 $client->client_code = $client->generateClientCode();
             }
-            
+
             $client->save();
-            
+
             DB::commit();
-            
+
             return redirect()->route('admin.clients.index')
                 ->with('success', 'Client created successfully.');
-                
+
         } catch (\Exception $e) {
-            DB::rollback();
-            
+            DB::rollBack();
+
             return redirect()->back()
                 ->with('error', 'Failed to create client: ' . $e->getMessage())
                 ->withInput();
@@ -132,58 +101,27 @@ class ClientController extends Controller
     /**
      * Update the specified client
      */
-    public function update(Request $request, Client $client)
+    public function update(UpdateClientRequest $request, Client $client)
     {
-        $validator = Validator::make($request->all(), [
-            'client_name' => 'required|string|max:255|unique:clients,client_name,' . $client->id,
-            'client_code' => 'nullable|string|max:10|unique:clients,client_code,' . $client->id,
-            'company_type' => 'nullable|string|max:100',
-            'industry' => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
-            'city' => 'nullable|string|max:100',
-            'state' => 'nullable|string|max:100',
-            'country' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'website' => 'nullable|url|max:255',
-            'contact_person' => 'nullable|string|max:255',
-            'contact_position' => 'nullable|string|max:100',
-            'contact_phone' => 'nullable|string|max:20',
-            'contact_email' => 'nullable|email|max:255',
-            'billing_address' => 'nullable|string|max:500',
-            'billing_city' => 'nullable|string|max:100',
-            'billing_state' => 'nullable|string|max:100',
-            'billing_country' => 'nullable|string|max:100',
-            'billing_postal_code' => 'nullable|string|max:20',
-            'tax_id' => 'nullable|string|max:50',
-            'registration_number' => 'nullable|string|max:50',
-            'payment_terms' => 'nullable|string|max:50',
-            'credit_limit' => 'nullable|numeric|min:0',
-            'preferred_currency' => 'nullable|string|size:3',
-            'notes' => 'nullable|string|max:1000',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+        if (!array_key_exists('is_active', $validated) || $validated['is_active'] === null) {
+            unset($validated['is_active']);
         }
 
         try {
             DB::beginTransaction();
-            
-            $client->update($request->all());
-            
+
+            $client->update($validated);
+
             DB::commit();
-            
+
             return redirect()->route('admin.clients.index')
                 ->with('success', 'Client updated successfully.');
-                
+
         } catch (\Exception $e) {
-            DB::rollback();
-            
+            DB::rollBack();
+
             return redirect()->back()
                 ->with('error', 'Failed to update client: ' . $e->getMessage())
                 ->withInput();
@@ -370,3 +308,4 @@ class ClientController extends Controller
         }
     }
 }
+

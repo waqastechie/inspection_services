@@ -4,17 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Personnel;
 use App\Http\Controllers\Controller;
+use App\Services\PersonnelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PersonnelController extends Controller
 {
+    protected $personnelService;
+    
+    public function __construct(PersonnelService $personnelService)
+    {
+        $this->personnelService = $personnelService;
+    }
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $personnel = Personnel::orderBy('first_name')->paginate(20);
+        $personnel = $this->personnelService->getAllPersonnel(20);
         return view('admin.personnel.index', compact('personnel'));
     }
 
@@ -54,33 +61,46 @@ class PersonnelController extends Controller
                 ->withInput();
         }
 
-        Personnel::create($request->all());
+        $this->personnelService->createPersonnel($request->all());
 
-        return redirect()->route('admin.personnel.index')
-            ->with('success', 'Personnel created successfully!');
+        return redirect()->route('personnel.index')
+            ->with('success', 'Personnel created successfully.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Personnel $personnel)
+    public function show($id)
     {
+        $personnel = $this->personnelService->findById($id);
+        if (!$personnel) {
+            abort(404);
+        }
         return view('admin.personnel.show', compact('personnel'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Personnel $personnel)
+    public function edit($id)
     {
+        $personnel = $this->personnelService->findById($id);
+        if (!$personnel) {
+            abort(404);
+        }
         return view('admin.personnel.edit', compact('personnel'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Personnel $personnel)
+    public function update(Request $request, $id)
     {
+        $personnel = $this->personnelService->findById($id);
+        if (!$personnel) {
+            abort(404);
+        }
+        
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -104,32 +124,37 @@ class PersonnelController extends Controller
                 ->withInput();
         }
 
-        $personnel->update($request->all());
+        $this->personnelService->updatePersonnel($id, $request->all());
 
-        return redirect()->route('admin.personnel.index')
-            ->with('success', 'Personnel updated successfully!');
+        return redirect()->route('personnel.index')
+            ->with('success', 'Personnel updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Personnel $personnel)
+    public function destroy($id)
     {
-        $personnel->delete();
+        $this->personnelService->deletePersonnel($id);
 
-        return redirect()->route('admin.personnel.index')
-            ->with('success', 'Personnel deleted successfully!');
+        return redirect()->route('personnel.index')
+            ->with('success', 'Personnel deleted successfully.');
     }
 
     /**
      * Toggle active status
      */
-    public function toggleStatus(Personnel $personnel)
+    public function toggleStatus($id)
     {
-        $personnel->update(['is_active' => !$personnel->is_active]);
+        $personnel = $this->personnelService->findById($id);
+        if (!$personnel) {
+            abort(404);
+        }
+        
+        $this->personnelService->updatePersonnel($id, ['is_active' => !$personnel->is_active]);
 
         return redirect()->back()
-            ->with('success', 'Personnel status updated successfully!');
+            ->with('success', 'Personnel status updated successfully.');
     }
 
     /**
@@ -137,17 +162,7 @@ class PersonnelController extends Controller
      */
     public function getPersonnel(Request $request)
     {
-        $query = Personnel::active();
-
-        if ($request->has('position')) {
-            $query->where('position', $request->position);
-        }
-
-        if ($request->has('department')) {
-            $query->where('department', $request->department);
-        }
-
-        $personnel = $query->get(['id', 'first_name', 'last_name', 'position', 'department', 'email', 'phone']);
+        $personnel = $this->personnelService->getActivePersonnel();
 
         return response()->json([
             'success' => true,

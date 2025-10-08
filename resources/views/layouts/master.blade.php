@@ -47,9 +47,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Custom Professional CSS -->
-    <link rel="stylesheet" href="{{ asset('css/inspection-form.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/inspection-form.css') }}?v={{ time() }}">
     <!-- Enhanced Tablet & iPad Responsive Styles -->
-    <link rel="stylesheet" href="{{ asset('css/tablet-responsive.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tablet-responsive.css') }}?v={{ time() }}">
     <!-- Pagination Styles -->
     <link rel="stylesheet" href="{{ asset('css/pagination.css') }}">
     <style>

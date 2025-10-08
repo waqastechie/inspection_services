@@ -1,4 +1,4 @@
-@extends('layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Lifting Inspection Report - Professional Inspection Services')
 
@@ -46,6 +46,8 @@
                     @csrf
                     
                     @include('inspections.sections.client-information', ['inspection' => null])
+                    
+                    @include('inspections.sections.job-details', ['inspection' => null])
                     
                     @include('inspections.sections.add-service')
                     
